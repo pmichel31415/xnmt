@@ -24,6 +24,13 @@ def read_data(loc_, post_process=None):
       data.append(t)
   return data
 
+def literal_eval_or_die(val):
+  try:
+    return ast.literal_eval(val)
+  except:
+    sys.stderr.write("WARNING: could not parse retrieval hypothesis {}".format(val))
+    return []
+
 def xnmt_evaluate(args):
   """"Returns the eval score (e.g. BLEU) of the hyp sents using reference trg sents
   """
@@ -42,12 +49,12 @@ def xnmt_evaluate(args):
     evaluator = CEREvaluator()
   elif eval_type == "recall":
     nbest = int(eval_param.get("nbest", 5))
-    hyp_postprocess = lambda x: ast.literal_eval(x)
+    hyp_postprocess = literal_eval_or_die
     ref_postprocess = lambda x: int(x)
     evaluator = RecallEvaluator(nbest=int(nbest))
   elif eval_type == "mean_avg_precision":
     nbest = int(eval_param.get("nbest", 5))
-    hyp_postprocess = lambda x: ast.literal_eval(x)
+    hyp_postprocess = literal_eval_or_die
     ref_postprocess = lambda x: int(x)
     evaluator = MeanAvgPrecisionEvaluator(nbest=int(nbest))
   else:

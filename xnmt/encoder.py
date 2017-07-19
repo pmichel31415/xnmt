@@ -147,7 +147,7 @@ class HarwathSpeechEncoder(Encoder, Serializable):
 
     pool3 = dy.max_dim(l3, d = 1)
     # print(pool3.dim())
-    output = dy.cdiv(pool3,dy.sqrt(dy.squared_norm(pool3)))
+    output = dy.cdiv(pool3,dy.l2_norm(pool3) + 1.0e-6)
     output = dy.reshape(output, (self.num_filters[2],), batch_size = batch_size)
     # print("my dim: ", output.dim())
 
