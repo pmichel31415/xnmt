@@ -206,7 +206,6 @@ class XnmtTrainer(object):
       loss.backward()
       self.trainer.update()
 
-
       # Devel reporting
       self.logger.report_train_process()
       if self.logger.should_report_dev():

@@ -9,6 +9,7 @@ from train_test_interface import TrainTestInterface
 from embedder import SimpleWordEmbedder
 from decoder import MlpSoftmaxDecoder
 from output import TextOutput
+from batcher import Batcher
 
 class Translator(TrainTestInterface):
   '''
@@ -88,7 +89,11 @@ class DefaultTranslator(Translator, Serializable):
     encodings = self.encoder.transduce(embeddings)
     self.attender.start_sent(encodings)
     self.decoder.initialize()
-    self.decoder.add_input(self.trg_embedder.embed(0))  # XXX: HACK, need to initialize decoder better
+    if Batcher.is_batched(src):
+      batch_size = len(src)
+      self.decoder.add_input(self.trg_embedder.embed(Batcher.mark_as_batch([0] * batch_size)))  # XXX: HACK, need to initialize decoder better
+    else:
+      self.decoder.add_input(self.trg_embedder.embed(0))  # XXX: HACK, need to initialize decoder better
     losses = []
 
     # single mode
