@@ -55,6 +55,7 @@ options = [
   Option("restart_trainer", bool, default_value=False, help_str="Restart trainer (useful for Adam) and revert weights to best dev checkpoint when applying LR decay (https://arxiv.org/pdf/1706.09733.pdf)"),
   Option("reload_between_epochs", bool, default_value=False, help_str="Reload train data between epochs (useful when sampling from train data, or with noisy input data via an external tool"),
   Option("dropout", float, default_value=0.0),
+  Option("base_lstm_builder", default_value="vanilla", help_str="Which LSTM implementation to use: vanilla (C++-based builder), custom (Python-port of vanilla), low-mem (based on the new LSTM nodes)"),
   Option("model", dict, default_value={}),
 ]
 
@@ -132,6 +133,7 @@ class XnmtTrainer(object):
     context={"corpus_parser" : self.corpus_parser, "training_corpus":self.training_corpus}
     model_globals.model_globals["default_layer_dim"] = self.args.default_layer_dim
     model_globals.model_globals["dropout"] = self.args.dropout
+    model_globals.model_globals["base_lstm_builder"] = self.args.base_lstm_builder
     self.model = self.model_serializer.initialize_object(self.args.model, context)
 
   def load_corpus_and_model(self):
