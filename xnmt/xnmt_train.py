@@ -60,7 +60,7 @@ options = [
 
 class XnmtTrainer(object):
   def __init__(self, args, output=None):
-    dy.renew_cg()
+    #dy.renew_cg()
     print('\n===================> train first renew __init__\n')
     self.args = args
     self.output = output
@@ -276,7 +276,7 @@ class XnmtTrainer(object):
     loss_sum = 0.0
     trg_words_cnt = 0
     for src, trg in zip(self.dev_src, self.dev_trg):
-      #dy.renew_cg()
+      dy.renew_cg()
       print('\n===================> train 3 renew compute dev loss\n')
       loss_sum += self.model.calc_loss(src, trg).value()
       trg_words_cnt += self.logger.count_trg_words(trg)
