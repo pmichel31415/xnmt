@@ -67,3 +67,21 @@ class BeamSearch(SearchStrategy):
 
     result = sorted(completed_hyp, key=lambda x: x.score, reverse=True)[0]
     return result.id_list
+
+
+class ForcedDecoding(SearchStrategy):
+
+  def __init__(self):
+    pass
+
+  def set_true_output(self, true_output):
+    self.true_output = true_output
+
+  def generate_output(self, decoder, attender, output_embedder, src_length=0):
+
+    for true_id in [Vocab.BS] + true_output[:-1]:
+      decoder.add_input(output_embedder.embed(true_id))
+      context = attender.calc_context(decoder.state.output())
+      # score = dy.log_softmax(decoder.get_scores(context)).npvalue()
+
+    return true_output
