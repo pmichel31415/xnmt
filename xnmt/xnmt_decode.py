@@ -72,7 +72,6 @@ def xnmt_decode(args, model_elements=None):
       with open(args.candidate_id_file, "r") as f:
         candidates = sorted({int(x):1 for x in f}.keys())
     generator.index_database(candidates)
-
   # Perform generation of output
   report = None
   with io.open(args.trg_file, 'wt', encoding='utf-8') as fp:  # Saving the translated output to a trg file
@@ -80,7 +79,8 @@ def xnmt_decode(args, model_elements=None):
       if args.max_src_len is not None and len(src) > args.max_src_len:
         trg_sent = NO_DECODING_ATTEMPTED
       else:
-        dy.renew_cg()
+        #dy.renew_cg()
+        print('\n =====================>decode.py renew \n')
         if issubclass(generator.__class__, Translator):
           if args.report_path != None:
             report = DefaultTranslatorReport()
@@ -89,13 +89,16 @@ def xnmt_decode(args, model_elements=None):
           trg_sent = output_generator.process_outputs(outputs)[0]
           if sys.version_info[0] == 2: assert isinstance(trg_sent, unicode), "Expected unicode as generator output, got %s" % type(trg_sent)
         elif issubclass(generator.__class__, Retriever):
-          trg_sent = generator.retrieve(src)
+          report = DefaultTranslatorReport()
+          trg_sent = generator.retrieve(src, report = report)
         else:
           raise RuntimeError("Unknown generator type " + generator.__class__)
 
+        if report != None:
+          report.write_report("{}.{}".format(args.report_path, idx), idx)
+
       fp.write(u"{}\n".format(trg_sent))
-      if report != None:
-        report.write_report("{}.{}".format(args.report_path, idx), idx)
+
 
 def output_processor_for_spec(spec):
   if spec=="none":
