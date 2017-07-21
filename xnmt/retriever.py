@@ -131,7 +131,7 @@ class DotProductRetriever(Retriever, Serializable):
     self.database.indexed = []
     for index in indices:
       item = self.database.data[int(index)]
-      dy.renew_cg()
+      #dy.renew_cg()
       self.database.indexed.append(self.encode_trg_example(item).npvalue())
     self.database.indexed = np.concatenate(self.database.indexed, axis=1)
 
@@ -141,12 +141,16 @@ class DotProductRetriever(Retriever, Serializable):
     dim = encodings.dim()
     return dy.reshape(encodings, (dim[0][0], dim[1]))
 
-  def retrieve(self, src, return_type="idxscore", nbest=5):
+  def retrieve(self, src, return_type="idxscore", nbest=5, report = None):
     src_embedding = self.src_embedder.embed_sent(src)
     src_encoding = dy.transpose(self.exprseq_pooling(self.src_encoder.transduce(src_embedding))).npvalue()
     scores = np.dot(src_encoding, self.database.indexed)
     kbest = np.argsort(scores, axis=1)[0,-nbest:][::-1]
     ids = kbest if self.database.inverted_index == None else [self.database.inverted_index[x] for x in kbest]
+    if report != None:
+      #print('===================> TEST ONLY get hidden states', self.src_encoder.get_hidden_states())
+      report.hidden_states = self.src_encoder.get_hidden_states()
+      print('===================> TEST ONLY value', sum(report.hidden_states[0].npvalue().flatten()!=0))
     if return_type == "idxscore":
       return [(i,scores[0,x]) for i, x in zip(ids, kbest)]
     elif return_type == "idx":

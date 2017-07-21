@@ -21,10 +21,17 @@ class Encoder(TrainTestInterface):
       It can be something else if the encoder is over something that is not a sequence of vectors though.
     """
     raise NotImplementedError('transduce must be implemented in Encoder subclasses')
+  def get_hidden_states(self):
+    """Get the hidden states of the encoder. 
+
+       Return the dynet expression of the hidden states.
+    """
 
 class BuilderEncoder(Encoder):
   def transduce(self, sent):
-    return ExpressionSequence(expr_list=self.builder.transduce(sent))
+    expression = ExpressionSequence(expr_list=self.builder.transduce(sent))
+    #self.hidden_states = self.builder.h()
+    return expression
 
 class LSTMEncoder(BuilderEncoder, Serializable):
   yaml_tag = u'!LSTMEncoder'
@@ -38,6 +45,7 @@ class LSTMEncoder(BuilderEncoder, Serializable):
     self.layers = layers
     self.hidden_dim = hidden_dim
     self.dropout = dropout
+    #self.hidden_states = []
     if bidirectional:
       self.builder = dy.BiRNNBuilder(layers, input_dim, hidden_dim, model, dy.VanillaLSTMBuilder)
     else:
