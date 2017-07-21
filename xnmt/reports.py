@@ -11,6 +11,7 @@ class DefaultTranslatorReport(object):
     self.src_words = None
     self.trg_words = None
     self.attentions = None
+    self.hidden_states = None
 
   @staticmethod
   def plot_attention(src_words, trg_words, attention_matrix, file_name=None):
@@ -72,6 +73,8 @@ class DefaultTranslatorReport(object):
         f.write("<p><b>Attention:</b><br/><img src=\"{}.attention.png\"/></p>\n".format(filename_of_report))
 
       f.write("</body></html>")
+
+    np.save("{}.hidden_states".format(path_to_report) , self.hidden_states[0],npvalue())
 
 if __name__ == "__main__":
 

@@ -131,7 +131,7 @@ class DotProductRetriever(Retriever, Serializable):
     self.database.indexed = []
     for index in indices:
       item = self.database.data[int(index)]
-      #dy.renew_cg()
+      dy.renew_cg()
       self.database.indexed.append(self.encode_trg_example(item).npvalue())
     self.database.indexed = np.concatenate(self.database.indexed, axis=1)
 
@@ -150,7 +150,7 @@ class DotProductRetriever(Retriever, Serializable):
     if report != None:
       #print('===================> TEST ONLY get hidden states', self.src_encoder.get_hidden_states())
       report.hidden_states = self.src_encoder.get_hidden_states()
-      print('===================> TEST ONLY value', sum(report.hidden_states[0].npvalue().flatten()!=0))
+      #print('===================> TEST ONLY value', sum(report.hidden_states[0].npvalue().flatten()!=0))
     if return_type == "idxscore":
       return [(i,scores[0,x]) for i, x in zip(ids, kbest)]
     elif return_type == "idx":

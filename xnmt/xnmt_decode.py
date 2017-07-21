@@ -79,8 +79,7 @@ def xnmt_decode(args, model_elements=None):
       if args.max_src_len is not None and len(src) > args.max_src_len:
         trg_sent = NO_DECODING_ATTEMPTED
       else:
-        #dy.renew_cg()
-        print('\n =====================>decode.py renew \n')
+        dy.renew_cg()
         if issubclass(generator.__class__, Translator):
           if args.report_path != None:
             report = DefaultTranslatorReport()
