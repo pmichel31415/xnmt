@@ -63,7 +63,8 @@ class HarwathSpeechEncoder(Encoder, Serializable):
     # print("my dim: ", output.dim())
 
     return ExpressionSequence(expr_tensor=output)
-
+  def get_hidden_states(self):
+    return self.hidden_states
   def initial_state(self):
     return PseudoState(self)
 

@@ -61,7 +61,11 @@ class DefaultTranslatorReport(object):
       if self.trg_text != None: f.write("<p><b>Target Text: </b> {}</p>\n".format(self.trg_text))
       if self.trg_words != None: f.write("<p><b>Target Words: </b> {}</p>\n".format(' '.join(self.trg_words)))
       # Alignments
+<<<<<<< HEAD
       if self.src_words != None and self.trg_words != None and self.attentions != None:
+=======
+      if  all([x != None for x in [self.src_words, self.trg_words, self.attentions]]):
+>>>>>>> changes to get hidden states
         if type(self.attentions) == dy.Expression:
           self.attentions = self.attentions.npvalue()
         elif type(self.attentions) == list:
@@ -73,8 +77,8 @@ class DefaultTranslatorReport(object):
         f.write("<p><b>Attention:</b><br/><img src=\"{}.attention.png\"/></p>\n".format(filename_of_report))
 
       f.write("</body></html>")
-
-    np.save("{}.hidden_states".format(path_to_report) , self.hidden_states[0],npvalue())
+    print('\ndynet expression of hidden states', self.hidden_states[0], '\n')
+    print("\n{}.hidden_states".format(path_to_report) , self.hidden_states[0].npvalue(), '\n')
 
 if __name__ == "__main__":
 
