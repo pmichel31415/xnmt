@@ -93,7 +93,7 @@ class DefaultTranslator(Translator, Serializable):
 
     # single mode
     if not Batcher.is_batched(src):
-      for ref_word in trg:
+      for ref_word in trg:  # TODO: trg index for custom attender
         context = self.attender.calc_context(self.decoder.state.output())
         word_loss = self.decoder.calc_loss(context, ref_word)
         losses.append(word_loss)
