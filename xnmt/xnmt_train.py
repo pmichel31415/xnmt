@@ -60,8 +60,7 @@ options = [
 
 class XnmtTrainer(object):
   def __init__(self, args, output=None):
-    #dy.renew_cg()
-    print('\n===================> train first renew __init__\n')
+    dy.renew_cg()
     self.args = args
     self.output = output
     model_globals.dynet_param_collection = model_globals.PersistentParamCollection(self.args.model_file, self.args.save_num_checkpoints)
@@ -197,7 +196,6 @@ class XnmtTrainer(object):
 
       # Loss calculation
       dy.renew_cg()
-      print('\n=========================>train renew 2 run epoch\n')
       loss = self.model.calc_loss(src, trg)
       self.logger.update_epoch_loss(src, trg, loss.value())
 
@@ -277,7 +275,6 @@ class XnmtTrainer(object):
     trg_words_cnt = 0
     for src, trg in zip(self.dev_src, self.dev_trg):
       dy.renew_cg()
-      print('\n===================> train 3 renew compute dev loss\n')
       loss_sum += self.model.calc_loss(src, trg).value()
       trg_words_cnt += self.logger.count_trg_words(trg)
     return trg_words_cnt, LossScore(loss_sum / trg_words_cnt)

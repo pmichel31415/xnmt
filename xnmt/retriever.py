@@ -148,9 +148,7 @@ class DotProductRetriever(Retriever, Serializable):
     kbest = np.argsort(scores, axis=1)[0,-nbest:][::-1]
     ids = kbest if self.database.inverted_index == None else [self.database.inverted_index[x] for x in kbest]
     if report != None:
-      #print('===================> TEST ONLY get hidden states', self.src_encoder.get_hidden_states())
       report.hidden_states = self.src_encoder.get_hidden_states()
-      #print('===================> TEST ONLY value', sum(report.hidden_states[0].npvalue().flatten()!=0))
     if return_type == "idxscore":
       return [(i,scores[0,x]) for i, x in zip(ids, kbest)]
     elif return_type == "idx":
