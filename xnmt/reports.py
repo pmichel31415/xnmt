@@ -3,8 +3,17 @@ import numpy as np
 import dynet as dy
 import os
 
-class DefaultTranslatorReport(object):
-  
+class Report(object):
+
+  def write_report(self, path_to_report, idx=None):
+    '''write the report to the given path.
+
+     Parameters:
+     path_to_report => path to output the report
+    '''
+ 
+class DefaultTranslatorReport(Report): 
+
   def __init__(self):
     self.src_text = None
     self.trg_text = None
@@ -77,8 +86,25 @@ class DefaultTranslatorReport(object):
         f.write("<p><b>Attention:</b><br/><img src=\"{}.attention.png\"/></p>\n".format(filename_of_report))
 
       f.write("</body></html>")
-    print('\ndynet expression of hidden states', self.hidden_states[0], '\n')
-    print("\n{}.hidden_states".format(path_to_report) , self.hidden_states[0].npvalue(), '\n')
+
+    #for i in len(self.hidden_states)
+    print("\n{}.hidden_states".format(path_to_report) , self.hidden_states['l1'].npvalue(), '\n')
+    print('\n shape is ', self.hidden_states['l1'].npvalue().shape)
+    #  TODO:
+    # save the hidden states in .npz, following the same structure as the dev input
+    # to make sure how we deal with the shape, flatten ? or else.
+
+class DefaultRetrieverReport(Report):
+    
+    def __init__(self):
+      self.hidden_states = None
+
+    def write_report(self, path_to_report, idx=None):
+      filename_of_report = os.path.basename(path_to_report)
+      print("\n{}.hidden_states".format(path_to_report) , self.hidden_states['l1'].npvalue(), '\n')
+      print('\n shape is ', self.hidden_states['l1'].npvalue().shape)
+      print('\n ', filename_of_report)
+
 
 if __name__ == "__main__":
 

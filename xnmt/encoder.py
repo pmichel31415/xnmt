@@ -26,6 +26,7 @@ class Encoder(TrainTestInterface):
 
        Return the dynet expression of the hidden states.
     """
+    raise NotImplementedError('get_hidden_states must be implemented in Encoder subclasses')
 
 class BuilderEncoder(Encoder):
   def transduce(self, sent):

@@ -88,7 +88,7 @@ def xnmt_decode(args, model_elements=None):
           trg_sent = output_generator.process_outputs(outputs)[0]
           if sys.version_info[0] == 2: assert isinstance(trg_sent, unicode), "Expected unicode as generator output, got %s" % type(trg_sent)
         elif issubclass(generator.__class__, Retriever):
-          report = DefaultTranslatorReport()
+          report = DefaultRetrieverReport()
           trg_sent = generator.retrieve(src, report = report)
         else:
           raise RuntimeError("Unknown generator type " + generator.__class__)
