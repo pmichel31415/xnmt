@@ -110,3 +110,63 @@ class HarwathImageEncoder(Encoder, Serializable):
 
   def initial_state(self):
     return PseudoState(self)
+
+class HarwathSpeechEncoder2017(Encoder, Serializable):
+  yaml_tag = u'!HarwathSpeechEncoder2017'
+  def __init__(self, filter_height, filter_width, channels, num_filters, stride):
+    """
+    :param num_layers: depth of the RNN
+    :param input_dim: size of the inputs
+    :param hidden_dim: size of the outputs (and intermediate RNN layer representations)
+    :param model
+    :param rnn_builder_factory: RNNBuilder subclass, e.g. LSTMBuilder
+    """
+    model = model_globals.dynet_param_collection.param_col
+    self.filter_height = filter_height
+    self.filter_width = filter_width
+    self.channels = channels
+    self.num_filters = num_filters
+    self.stride = stride
+
+    normalInit=dy.NormalInitializer(0, 0.1)
+    self.filters1 = model.add_parameters(dim=(self.filter_height[0], self.filter_width[0], self.channels[0], self.num_filters[0]),
+                                         init=normalInit)
+    self.filters2 = model.add_parameters(dim=(self.filter_height[1], self.filter_width[1], self.channels[1], self.num_filters[1]),
+                                         init=normalInit)
+    self.filters3 = model.add_parameters(dim=(self.filter_height[2], self.filter_width[2], self.channels[2], self.num_filters[2]),
+                                         init=normalInit)
+    self.filters4 = model.add_parameters(dim=(self.filter_height[3], self.filter_width[3], self.channels[3], self.num_filters[3]),
+                                         init=normalInit)
+    self.filters5 = model.add_parameters(dim=(self.filter_height[4], self.filter_width[4], self.channels[4], self.num_filters[4]),
+                                         init=normalInit)
+  def transduce(self, src):
+    src = src.as_tensor()
+
+    src_height = src.dim()[0][0]
+    src_width = src.dim()[0][1]
+    src_channels = 1
+    batch_size = src.dim()[1]
+
+
+    src = dy.reshape(src, (src_height, src_width, src_channels), batch_size=batch_size)
+    # convolution and pooling layers
+    l1 = dy.rectify(dy.conv2d(src, dy.parameter(self.filters1), stride = [self.stride[0], self.stride[0]], is_valid = True))
+    l2 = dy.rectify(dy.conv2d(l1, dy.parameter(self.filters2), stride = [self.stride[1], self.stride[1]], is_valid = True))  
+    pool1 = dy.maxpooling2d(l2, (1, 3), (1,2), is_valid = True)
+
+    l3 = dy.rectify(dy.conv2d(pool1, dy.parameter(self.filters3), stride = [self.stride[2], self.stride[2]], is_valid = True))
+    pool2 = dy.maxpooling2d(l3, (1, 3), (1,2), is_valid = True)
+
+    l4 = dy.rectify(dy.conv2d(pool2, dy.parameter(self.filters4), stride = [self.stride[3], self.stride[3]], is_valid = True))
+    pool3 = dy.maxpooling2d(l4, (1, 3), (1,2), is_valid = True)
+
+    l5 = dy.rectify(dy.conv2d(pool3, dy.parameter(self.filters5), stride = [self.stride[4], self.stride[4]], is_valid = True))
+    pool4 = dy.max_dim(l5, d = 1)
+    
+    output = dy.cdiv(pool4,dy.sqrt(dy.squared_norm(pool3)))
+    output = dy.reshape(output, (self.num_filters[4],), batch_size = batch_size)
+
+    return ExpressionSequence(expr_tensor=output)
+
+  def initial_state(self):
+    return PseudoState(self)
