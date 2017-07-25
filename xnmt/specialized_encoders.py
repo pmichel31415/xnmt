@@ -24,9 +24,9 @@ class HarwathSpeechEncoder(Encoder, Serializable):
     self.channels = channels
     self.num_filters = num_filters
     self.stride = stride # (2,2)
-    # hidden states is a dictionary whose keys 'l1', 'l2', 'l3' correspond to hidder layer 1, 2, 3 etc.
+    # hidden states is a dictionary whose keys 'l1', 'l2', 'output' correspond to hidder layer 1, 2 etc.  and the final should be the output of the encoder.
     # its values are the dynet expressions of those hidden state.
-    self.hidden_states = { ('l'+str(i+1)) : None for i in np.arange(len(self.num_filters))}
+    self.hidden_states = {}
 
     normalInit=dy.NormalInitializer(0, 0.1)
     self.filters1 = model.add_parameters(dim=(self.filter_height[0], self.filter_width[0], self.channels[0], self.num_filters[0]),
@@ -47,20 +47,20 @@ class HarwathSpeechEncoder(Encoder, Serializable):
     src = dy.reshape(src, (src_height, src_width, src_channels), batch_size=batch_size) # ((276, 80, 3), 1)
     # convolution and pooling layers
     l1 = dy.rectify(dy.conv2d(src, dy.parameter(self.filters1), stride = [self.stride[0], self.stride[0]], is_valid = True))
-    self.hidden_states['l1'] = l1
     pool1 = dy.maxpooling2d(l1, (1, 4), (1,2), is_valid = True)
+    self.hidden_states['l1'] = pool1
 
     l2 = dy.rectify(dy.conv2d(pool1, dy.parameter(self.filters2), stride = [self.stride[1], self.stride[1]], is_valid = True))
-    self.hidden_states['l2'] = l2
     pool2 = dy.maxpooling2d(l2, (1, 4), (1,2), is_valid = True)
+    self.hidden_states['l2'] = pool2
 
     l3 = dy.rectify(dy.conv2d(pool2, dy.parameter(self.filters3), stride = [self.stride[2], self.stride[2]], is_valid = True))
-    self.hidden_states['l3'] = l3
     pool3 = dy.max_dim(l3, d = 1)
     # print(pool3.dim())
     my_norm = dy.l2_norm(pool3) + 1e-6
     output = dy.cdiv(pool3,my_norm)
     output = dy.reshape(output, (self.num_filters[2],), batch_size = batch_size)
+    self.hidden_states['output'] = output
     # print("my dim: ", output.dim())
 
     return ExpressionSequence(expr_tensor=output)

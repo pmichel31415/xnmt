@@ -87,9 +87,6 @@ class DefaultTranslatorReport(Report):
 
       f.write("</body></html>")
 
-    #for i in len(self.hidden_states)
-    print("\n{}.hidden_states".format(path_to_report) , self.hidden_states['l1'].npvalue(), '\n')
-    print('\n shape is ', self.hidden_states['l1'].npvalue().shape)
     #  TODO:
     # save the hidden states in .npz, following the same structure as the dev input
     # to make sure how we deal with the shape, flatten ? or else.
@@ -100,11 +97,23 @@ class DefaultRetrieverReport(Report):
       self.hidden_states = None
 
     def write_report(self, path_to_report, idx=None):
-      filename_of_report = os.path.basename(path_to_report)
-      print("\n{}.hidden_states".format(path_to_report) , self.hidden_states['l1'].npvalue(), '\n')
-      print('\n shape is ', self.hidden_states['l1'].npvalue().shape)
-      print('\n ', filename_of_report)
-
+      folder_of_hidden_states =os.path.dirname(path_to_report)+'/hidden_states/'
+      if not os.path.exists(folder_of_hidden_states):
+        os.makedirs(folder_of_hidden_states)
+      np.savez(folder_of_hidden_states+'caption{}'.format(idx),**{ key : self.hidden_states[key].npvalue() for key in self.hidden_states.keys()})
+      '''
+      for i in np.arange(len(self.hidden_states)-1):
+        with open('hidden_layer_{}.txt'.format(i+1), 'ab') as f:
+          print('\n', self.hidden_states)
+          data_numpy = self.hidden_states['l'+str(i+1)].npvalue()
+          print('shape is', data_numpy.shape)
+          np.savetxt(f, data_numpy.reshape((data_numpy.shape[1], data_numpy.shape[2])), fmt='%.4f')
+      with open('output.txt', 'ab') as f:
+        data_numpy = self.hidden_states['output'].npvalue()
+        print('output shape is', data_numpy.shape)
+        np.savetxt(f, data_numpy.reshape((1, data_numpy.shape[0])), fmt='%.4f')
+      '''
+        
 
 if __name__ == "__main__":
 
