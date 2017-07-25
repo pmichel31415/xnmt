@@ -39,6 +39,7 @@ defaults:
                 reader: !ContVecReader {}
                 database_file: examples/data/vgg20.npz
     decode:
+        report_path: examples/output/<EXP>.report
         src_file: examples/data/mfcc_tx20.npz
     evaluate:
         ref_file: examples/data/flickr_tx20.ids
