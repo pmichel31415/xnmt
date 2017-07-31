@@ -1,4 +1,5 @@
 import dynet as dy
+import expression_sequence
 from encoder import *
 
 # This is a file for specialized encoders that implement a particular model
@@ -37,11 +38,11 @@ class HarwathSpeechEncoder(Encoder, Serializable):
 
     src_height = src.dim()[0][0]
     src_width = src.dim()[0][1]
-    src_channels = 1
+    # src_channels = 1
     batch_size = src.dim()[1]
 
 
-    src = dy.reshape(src, (src_height, src_width, src_channels), batch_size=batch_size) # ((276, 80, 3), 1)
+    # src = dy.reshape(src, (src_height, src_width, src_channels), batch_size=batch_size) # ((276, 80, 3), 1)
     # print(self.filters1)
     # convolution and pooling layers
     l1 = dy.rectify(dy.conv2d(src, dy.parameter(self.filters1), stride = [self.stride[0], self.stride[0]], is_valid = True))
@@ -59,7 +60,7 @@ class HarwathSpeechEncoder(Encoder, Serializable):
     output = dy.reshape(output, (self.num_filters[2],), batch_size = batch_size)
     # print("my dim: ", output.dim())
 
-    return ExpressionSequence(expr_tensor=output)
+    return expression_sequence.ExpressionSequence(expr_tensor=output)
 
   def initial_state(self):
     return PseudoState(self)
@@ -106,7 +107,7 @@ class HarwathImageEncoder(Encoder, Serializable):
     # convolution and pooling layers
     l1 = (W*src)+b
     output = dy.cdiv(l1,dy.sqrt(dy.squared_norm(l1)))
-    return ExpressionSequence(expr_tensor=output)
+    return expression_sequence.ExpressionSequence(expr_tensor=output)
 
   def initial_state(self):
     return PseudoState(self)

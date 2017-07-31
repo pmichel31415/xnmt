@@ -14,8 +14,10 @@ class Input(object):
   """
   def __len__(self):
     raise NotImplementedError("__len__() must be implemented by Input subclasses")
+
   def __getitem__(self):
     raise NotImplementedError("__getitem__() must be implemented by Input subclasses")
+
   def get_padded_sent(self, token, pad_len):
     raise NotImplementedError("get_padded_sent() must be implemented by Input subclasses")
 
@@ -25,13 +27,17 @@ class SimpleSentenceInput(Input):
   """
   def __init__(self, l):
     self.l = l
+
   def __len__(self):
     return self.l.__len__()
+
   def __getitem__(self, key):
     return self.l.__getitem__(key)
+
   def get_padded_sent(self, token, pad_len):
     self.l.extend([token] * pad_len)
     return self
+
   def __str__(self):
     return " ".join(six.moves.map(str, self.l))
 
@@ -41,21 +47,24 @@ class ArrayInput(Input):
   """
   def __init__(self, nparr):
     self.nparr = nparr
+
   def __len__(self):
-    return self.nparr.__len__()
+    return self.nparr.shape[1] if len(self.nparr.shape) >= 2 else 1
+
   def __getitem__(self, key):
     return self.nparr.__getitem__(key)
+
   def get_padded_sent(self, token, pad_len):
     if pad_len > 0:
-      self.nparr = np.append(self.nparr, np.zeros((pad_len, self.nparr.shape[1])), axis=0)
+      self.nparr = np.append(self.nparr, np.zeros((self.nparr.shape[0], pad_len)), axis=1)
     return self
+
   def get_array(self):
     return self.nparr
 
 ###### Classes that will read in a file and turn it into an input
 
 class InputReader(object):
-
   def read_sents(self, filename, filter_ids=None):
     """
     :param filename: data file
@@ -63,12 +72,14 @@ class InputReader(object):
     :returns: iterator over sentences from filename
     """
     raise RuntimeError("Input readers must implement the read_sents function")
+
   def count_sents(self, filename):
     """
     :param filename: data file
     :returns: number of sentences in the data file
     """
     raise RuntimeError("Input readers must implement the count_sents function")
+
   def freeze(self):
     pass
 
@@ -79,6 +90,7 @@ class BaseTextReader(InputReader):
       for _ in f:
         i+=1
     return i
+
   def iterate_filtered(self, filename, filter_ids=None):
     """
     :param filename: data file (text file)
@@ -130,13 +142,17 @@ class ContVecReader(InputReader, Serializable):
   Handles the case where sents are sequences of continuous-space vectors.
 
   We assume a list of matrices (sents) serialized as .npz (with numpy.savez_compressed())
-  Sentences should be named arr_0, arr_1, ... (=np default for unnamed archives).
-  We can index them as sents[sent_no][word_ind,feat_ind]
+  Sentences should be named XXX_0, XXX_1, etc., where the final number after the underbar
+  indicates the order of the sentence in the corpus.
+  Within each sentence, the indices will be:
+  * sents[sent_no][feat_ind,word_ind] if transpose=False
+  * sents[sent_no][word_ind,feat_ind] if transpose=True
   """
   yaml_tag = u"!ContVecReader"
 
   def __init__(self, transpose=False):
     self.transpose = transpose
+
   def read_sents(self, filename, filter_ids=None):
     npzFile = np.load(filename, mmap_mode=None if filter_ids is None else "r")
     npzKeys = sorted(npzFile.files, key=lambda x: int(x.split('_')[-1]))
@@ -162,9 +178,6 @@ class IDReader(BaseTextReader, Serializable):
   Handles the case where we need to read in a single ID (like retrieval problems)
   """
   yaml_tag = u"!IDReader"
-
-  def __init__(self):
-    pass
 
   def read_sents(self, filename, filter_ids=None):
     return map(lambda l: int(l.strip()), self.iterate_filtered(filename, filter_ids))
