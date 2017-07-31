@@ -49,6 +49,7 @@ options = [
   Option("momentum", float, default_value = 0.9),
   Option("lr_decay", float, default_value=1.0),
   Option("lr_decay_times", int, default_value=3, help_str="Early stopping after decaying learning rate a certain number of times"),
+  Option("lr_decay_epochs", int, default_value=10, help_str="apply the learning rate decay after a certain number of epochs"),
   Option("attempts_before_lr_decay", int, default_value=1, help_str="apply LR decay after dev scores haven't improved over this many checkpoints"),
   Option("dev_metrics", default_value="", help_str="Comma-separated list of evaluation metrics (bleu/wer/cer)"),
   Option("schedule_metric", default_value="loss", help_str="determine learning schedule based on this dev_metric (loss/bleu/wer/cer)"),
@@ -61,6 +62,7 @@ options = [
 class XnmtTrainer(object):
   def __init__(self, args, output=None):
     dy.renew_cg()
+
     self.args = args
     self.output = output
     model_globals.dynet_param_collection = model_globals.PersistentParamCollection(self.args.model_file, self.args.save_num_checkpoints)
@@ -240,6 +242,10 @@ class XnmtTrainer(object):
           self.logger.set_dev_score(trg_words_cnt, eval_scores[schedule_metric])
 
         print("> Checkpoint")
+        # apply learning rate decay after a certain number of epochs
+        if self.args.lr_decay<1 and int(self.logger.epoch_num) % int(self.args.lr_decay_epochs) == 0 :
+          self.trainer.learning_rate *= self.args.lr_decay
+          print('Apply learning rate decay =====> new learning rate: %s' % self.trainer.learning_rate)
         # print previously computed metrics
         for metric in self.evaluators:
           if metric != schedule_metric:

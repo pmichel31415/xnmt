@@ -5,13 +5,16 @@ defaults:
     hyp_file: examples/output/<EXP>.hyp
     out_file: examples/output/<EXP>.out
     err_file: examples/output/<EXP>.err
-    run_for_epochs: 20
+    run_for_epochs: 6
     eval_metrics: bleu
   train:
     trainer: adam
     learning_rate: 0.01
     default_layer_dim: 256 
     dropout: 0.0
+    #lr_decay: 0.5
+    #lr_decay_epochs: 3
+    #attempts_before_lr_decay: 1000 # this is to avoid extra lr_decay, because the default setting in the xnmt_train is after one non-improved check point, it will apply lr_decay
     dev_metrics: bleu
     training_corpus: !BilingualTrainingCorpus
       train_src: examples/data/head.ja

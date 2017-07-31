@@ -8,6 +8,35 @@ import numpy as np
 
 # This is a CNN-based encoder that was used in the following paper:
 #  http://papers.nips.cc/paper/6186-unsupervised-learning-of-spoken-language-with-visual-context.pdf
+class TilburgSpeechEncoder(Encoder, Serializable):
+  yaml_tag = u'!TilburgSpeechEncoder'
+  def __init__(self, filter_height, filter_width, channels, num_filter, stride, rhn_num_hidden_layers, rhn_dim_hidden_layer, rhn_microsteps, attention_dim):
+  """
+  :param etc.
+
+  """
+
+  model = model_globals.dynet_param_collection.param_col
+  recurH = {}
+  recurT = {}
+  for index in rhn_num_hidden_layers:
+    recurH_layer = {}
+    recurT_layer = {}
+    for l in range(microsteps):
+      recurH_layer.append(model.add_parameters(Linear(hidden_size[index], hidden_size[index])))
+      
+
+  self.filter1 = model.add_parameters(dim=(self.filter_height, self.filter_width[0], self.channels[0], self.num_filters[0]), init=normalInit)
+
+  self.filter2 = model.
+
+  
+
+
+
+
+
+
 class HarwathSpeechEncoder(Encoder, Serializable):
   yaml_tag = u'!HarwathSpeechEncoder'
   def __init__(self, filter_height, filter_width, channels, num_filters, stride):
