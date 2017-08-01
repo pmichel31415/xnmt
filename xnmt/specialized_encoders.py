@@ -8,6 +8,7 @@ import numpy as np
 
 # This is a CNN-based encoder that was used in the following paper:
 #  http://papers.nips.cc/paper/6186-unsupervised-learning-of-spoken-language-with-visual-context.pdf
+'''
 class TilburgSpeechEncoder(Encoder, Serializable):
   yaml_tag = u'!TilburgSpeechEncoder'
   def __init__(self, filter_height, filter_width, channels, num_filter, stride, rhn_num_hidden_layers, rhn_dim_hidden_layer, rhn_microsteps, attention_dim):
@@ -31,7 +32,7 @@ class TilburgSpeechEncoder(Encoder, Serializable):
   self.filter2 = model.
 
   
-
+'''
 
 
 
@@ -76,12 +77,12 @@ class HarwathSpeechEncoder(Encoder, Serializable):
     src = dy.reshape(src, (src_height, src_width, src_channels), batch_size=batch_size) # ((276, 80, 3), 1)
     # convolution and pooling layers
     l1 = dy.rectify(dy.conv2d(src, dy.parameter(self.filters1), stride = [self.stride[0], self.stride[0]], is_valid = True))
-    pool1 = dy.maxpooling2d(l1, (1, 4), (1,2), is_valid = True)
-    self.hidden_states['l1'] = pool1
+    self.hidden_states['l1'] = l1
+    pool1 = dy.maxpooling2d(l1, (1, 4), (1,2), is_valid = True)  
 
     l2 = dy.rectify(dy.conv2d(pool1, dy.parameter(self.filters2), stride = [self.stride[1], self.stride[1]], is_valid = True))
+    self.hidden_states['l2'] = l2
     pool2 = dy.maxpooling2d(l2, (1, 4), (1,2), is_valid = True)
-    self.hidden_states['l2'] = pool2
 
     l3 = dy.rectify(dy.conv2d(pool2, dy.parameter(self.filters3), stride = [self.stride[2], self.stride[2]], is_valid = True))
     pool3 = dy.max_dim(l3, d = 1)

@@ -44,6 +44,8 @@ class ResidualRNNBuilder(object):
     :param rnn_builder_factory: RNNBuilder subclass, e.g. VanillaLSTMBuilder
     :param add_to_output: whether to add a residual connection to the output layer
     """
+    # Save the hidden states 
+    self.hidden_states = {}
     assert num_layers > 0
     self.builder_layers = []
     self.builder_layers.append(rnn_builder_factory(1, input_dim, hidden_dim, model))
@@ -103,14 +105,20 @@ class ResidualRNNBuilder(object):
     add_inputs and this function.
     """
     es = self.builder_layers[0].initial_state().transduce(es)
+    print('\n===> Check the hidden states of es, expected to be one expression', es.h())
+    self.hidden_states['l1'] = es.h()
 
     if len(self.builder_layers) == 1:
       return es
 
-    for l in self.builder_layers[1:]:
+    for index,l in enumerate(self.builder_layers[1:]):
       es = self._sum_lists(l.initial_state().transduce(es), es)
+      self.hidden_states['l'+str(index+2)] = l.h()
+      print('\n===> Check the hidden states of l',str(index+2),'  expected to be one expression', l.h())
 
     last_output = self.builder_layers[-1].initial_state().transduce(es)
+    self.hidden_states['output'] = last_output.h()
+    print('\n===> Check the hidden states of out, expected to be one expression', last_output.h())
 
     if self.add_to_output:
       return self._sum_lists(last_output, es)
@@ -147,6 +155,7 @@ class ResidualBiRNNBuilder:
     return PseudoState(self, self.transduce(es))
 
   def transduce(self, es):
+    print('\n===> Check the dimention of the input', es, 'shape is', es.shape)
     forward_e = self.forward_layer.initial_state().transduce(es)
     backward_e = self.backward_layer.initial_state().transduce(reversed(es))
 

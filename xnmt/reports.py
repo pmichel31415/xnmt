@@ -1,7 +1,8 @@
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import numpy as np
 import dynet as dy
 import os
+import pickle
 
 class Report(object):
 
@@ -93,10 +94,13 @@ class DefaultRetrieverReport(Report):
       self.hidden_states = None
 
     def write_report(self, path_to_report, idx=None):
+      print('\n===>Check the write report\n')
       folder_of_hidden_states =os.path.dirname(path_to_report)+'/hidden_states/'
       if not os.path.exists(folder_of_hidden_states):
         os.makedirs(folder_of_hidden_states)
-      np.savez(folder_of_hidden_states+'caption{}'.format(idx),**{ key : self.hidden_states[key].npvalue() for key in self.hidden_states.keys()})
+      pickle.dump({ key : self.hidden_states[key].npvalue() for key in self.hidden_states.keys()}, open(folder_of_hidden_states+'caption{}.p'.format(idx), 'wb')) 
+
+
       '''
       for i in np.arange(len(self.hidden_states)-1):
         with open('hidden_layer_{}.txt'.format(i+1), 'ab') as f:

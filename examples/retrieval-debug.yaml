@@ -1,11 +1,11 @@
 # Small config to help refactoring to make the model completely YAML based
 defaults:
   experiment:
-    model_file: examples/output/<EXP>.mod
-    hyp_file: examples/output/<EXP>.hyp
-    out_file: examples/output/<EXP>.out
-    err_file: examples/output/<EXP>.err
-    run_for_epochs: 50
+    model_file: examples/output_debug/<EXP>.mod
+    hyp_file: examples/output_debug/<EXP>.hyp
+    out_file: examples/output_debug/<EXP>.out
+    err_file: examples/output_debug/<EXP>.err
+    run_for_epochs: 2
     eval_metrics: recall|nbest=1,recall|nbest=3,recall|nbest=5
   train:
     trainer: adam
@@ -37,6 +37,7 @@ defaults:
         database_file: examples/data/head.en
   decode:
     src_file: examples/data/head.ja
+    report_path: examples/output_debug/<EXP>.report
   evaluate:
     ref_file: examples/data/head.smallids
 

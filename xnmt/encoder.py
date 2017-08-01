@@ -31,8 +31,10 @@ class Encoder(TrainTestInterface):
 class BuilderEncoder(Encoder):
   def transduce(self, sent):
     expression = ExpressionSequence(expr_list=self.builder.transduce(sent))
+    #print('\n====>Check the builder Encoder ', self.builder.h())
     #self.hidden_states = self.builder.h()
     return expression
+
 
 class LSTMEncoder(BuilderEncoder, Serializable):
   yaml_tag = u'!LSTMEncoder'
