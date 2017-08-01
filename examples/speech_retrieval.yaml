@@ -1,9 +1,16 @@
 defaults:
     experiment:
+<<<<<<< HEAD
         model_file: examples/output_debug/<EXP>.mod
         hyp_file: examples/output_debug/<EXP>.hyp
         out_file: examples/output_debug/<EXP>.out
         err_file: examples/output_debug/<EXP>.err
+=======
+        model_file: examples/output/<EXP>.mod
+        hyp_file: examples/output/<EXP>.hyp
+        out_file: examples/output/<EXP>.out
+        err_file: examples/output/<EXP>.err
+>>>>>>> ef54aae0bfadbf2467cf24fb29b8b93297843375
         run_for_epochs: 2
         eval_metrics: recall|nbest=1,recall|nbest=5
     train:
@@ -39,7 +46,11 @@ defaults:
                 reader: !ContVecReader {}
                 database_file: examples/data/vgg20.npz
     decode:
+<<<<<<< HEAD
         report_path: examples/output_debug/<EXP>.report
+=======
+        report_path: examples/output/<EXP>.report
+>>>>>>> ef54aae0bfadbf2467cf24fb29b8b93297843375
         src_file: examples/data/mfcc_tx20.npz
     evaluate:
         ref_file: examples/data/flickr_tx20.ids
