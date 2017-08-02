@@ -24,8 +24,8 @@ class BeamSearch(SearchStrategy):
   class Hypothesis:
     def __init__(self, score, id_list, state):
       self.score = score
-      self.state = state
       self.id_list = id_list
+      self.state = state
 
   def generate_output(self, decoder, attender, output_embedder, src_length=0):
     active_hyp = [self.Hypothesis(0, [0], decoder.state)]
@@ -76,9 +76,9 @@ class ForcedDecoding(SearchStrategy):
 
   def generate_output(self, decoder, attender, output_embedder, src_length=0):
 
-    for true_id in [Vocab.BS] + true_output[:-1]:
+    for true_id in [Vocab.SS] + self.true_output[:-1]:
       decoder.add_input(output_embedder.embed(true_id))
       context = attender.calc_context(decoder.state.output())
       # score = dy.log_softmax(decoder.get_scores(context)).npvalue()
 
-    return true_output
+    return self.true_output
