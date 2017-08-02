@@ -11,7 +11,7 @@ import os
 
 from vocab import Vocab
 from serializer import Serializable, DependentInitParam
-from search_strategy import BeamSearch
+from search_strategy import BeamSearch, ForcedDecoding
 from embedder import SimpleWordEmbedder
 from decoder import MlpSoftmaxDecoder
 from output import TextOutput
@@ -97,7 +97,12 @@ class DefaultTranslator(Translator, Serializable, HTMLReportable):
   def initialize(self, args):
       # Search Strategy
     len_norm_type   = getattr(length_normalization, args.len_norm_type)
-    self.search_strategy = BeamSearch(b=args.beam, max_len=args.max_len, len_norm=len_norm_type(**args.len_norm_params))
+    if args.search_strategy == 'beam':
+      self.search_strategy = BeamSearch(b=args.beam, max_len=args.max_len, len_norm=len_norm_type(**args.len_norm_params))
+    elif args.search_strategy == 'force':
+      self.search_strategy = ForcedDecoding()
+    else:
+      raise RuntimeError('Unimplemented search strategy.')
     self.report_path = args.report_path
 
   def calc_loss(self, src, trg, info=None):
@@ -134,11 +139,15 @@ class DefaultTranslator(Translator, Serializable, HTMLReportable):
 
     return dy.esum(losses)
 
-  def generate(self, src, idx):
+  def generate(self, src, idx, trg=None):
     # Not including this as a default argument is a hack to get our documentation pipeline working
     search_strategy = self.search_strategy
     if search_strategy == None:
       search_strategy = BeamSearch(1, len_norm=NoNormalization())
+    if isinstance(search_strategy, ForcedDecoding):
+      if trg is None:
+        raise RuntimeError('Target sequence not provided for forced decoding.')
+      search_strategy.set_true_output(trg)
     if not batcher.is_batched(src):
       src = batcher.mark_as_batch([src])
     outputs = []
