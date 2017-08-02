@@ -1,0 +1,49 @@
+# toy config file
+defaults:
+  experiment:
+    model_file: examples/output/mboshi/<EXP>.mod
+    hyp_file: examples/output/mboshi/<EXP>.hyp
+    out_file: examples/output/mboshi/<EXP>.out
+    err_file: examples/output/mboshi/<EXP>.err
+    run_for_epochs: 20
+    eval_metrics: cer,wer,bleu
+  train:
+    default_layer_dim: 32
+    trainer: sgd
+    batch_size: 1
+    learning_rate: 0.1
+    lr_decay: 1
+    dev_metrics: cer,wer,bleu
+    training_corpus: !BilingualTrainingCorpus
+      train_src: examples/data/mboshi/train.char.trunc.0-19.mb
+      train_trg: examples/data/mboshi/train.word.trunc.0-19.fr
+      dev_src: examples/data/mboshi/dev.char.trunc.0-4.mb
+      dev_trg: examples/data/mboshi/dev.word.trunc.0-4.fr
+    corpus_parser: !BilingualCorpusParser
+      src_reader: !PlainTextReader {}
+      trg_reader: !PlainTextReader {}
+    model: !DefaultTranslator
+      src_embedder: !SimpleWordEmbedder
+        emb_dim: 64
+      encoder: !LSTMEncoder
+        layers: 1
+        # downsampling_method: skip
+        # input_dim: 39
+        # hidden_dim: 64
+      attender: !StandardAttender
+        state_dim: 64
+        hidden_dim: 64
+        input_dim: 64
+      trg_embedder: !SimpleWordEmbedder
+        emb_dim: 64
+      decoder: !MlpSoftmaxDecoder
+        layers: 1
+        mlp_hidden_dim: 64
+  decode:
+    search_strategy: force
+    src_file: examples/data/mboshi/train.char.trunc.0-19.mb
+    forced_trg_file: examples/data/mboshi/train.word.trunc.0-19.fr
+  evaluate:
+    ref_file: examples/data/mboshi/train.word.trunc.0-19.fr
+
+word-mboshi-word-french-toy:
