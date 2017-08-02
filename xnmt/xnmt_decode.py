@@ -31,6 +31,8 @@ options = [
   Option("max_len", int, default_value=100),
   Option("len_norm_type", str, default_value="NoNormalization"),
   Option("len_norm_params", dict, default_value={}),
+  Option("search_strategy", str, default_value="beam"),
+  Option("forced_trg_file", help_str="path of target file to force decoding to"),
 ]
 
 NO_DECODING_ATTEMPTED = u"@@NO_DECODING_ATTEMPTED@@"
@@ -59,6 +61,10 @@ def xnmt_decode(args, model_elements=None):
 
   # Corpus
   src_corpus = corpus_parser.src_reader.read_sents(args.src_file)
+  if args.search_strategy == 'force':
+    trg_corpus = corpus_parser.trg_reader.read_sents(args.forced_trg_file)
+    trg_corpus = list(trg_corpus)
+
   # Vocab
   src_vocab = corpus_parser.src_reader.vocab if hasattr(corpus_parser.src_reader, "vocab") else None
   trg_vocab = corpus_parser.trg_reader.vocab if hasattr(corpus_parser.trg_reader, "vocab") else None
@@ -77,7 +83,11 @@ def xnmt_decode(args, model_elements=None):
         outputs = NO_DECODING_ATTEMPTED
       else:
         dy.renew_cg()
-        outputs = generator.generate_output(src, i)
+        if args.search_strategy == 'force':
+          trg = trg_corpus[i]
+          outputs = generator.generate_output(src, i, trg)
+        else:
+          outputs = generator.generate_output(src, i)
       # Printing to trg file
       fp.write(u"{}\n".format(outputs))
       # Generating html report
