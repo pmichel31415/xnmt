@@ -210,7 +210,7 @@ class DefaultTranslator(Translator, Serializable, HTMLReportable):
       elif type(att) != np.ndarray:
         raise RuntimeError("Illegal type for attentions in translator report: {}".format(type(attentions)))
       if inp_continuous:
-        pass
+        plot.plot_attention_continuous(src, trg, attentions, file_name = attention_file)
       else:
         plot.plot_attention(src, trg, attentions, file_name = attention_file)
 
