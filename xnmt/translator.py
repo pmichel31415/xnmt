@@ -8,6 +8,7 @@ import batcher
 import six
 import plot
 import os
+import input
 
 from vocab import Vocab
 from serializer import Serializable, DependentInitParam
@@ -144,11 +145,14 @@ class DefaultTranslator(Translator, Serializable, HTMLReportable):
       output_actions = search_strategy.generate_output(self.decoder, self.attender, self.trg_embedder, src_length=len(sents))
       # In case of reporting
       if self.report_path is not None:
-        src_words = [self.src_vocab[w] for w in sents]
-        trg_words = [self.trg_vocab[w] for w in output_actions[1:]]
-        attentions = self.attender.attention_vecs
-        self.set_html_input(idx, src_words, trg_words, attentions)
-        self.set_html_path('{}.{}'.format(self.report_path, str(idx)))
+        if isinstance(sents,input.SimpleSentenceInput):
+            src_words = [self.src_vocab[w] for w in sents]
+            trg_words = [self.trg_vocab[w] for w in output_actions[1:]]
+            attentions = self.attender.attention_vecs
+            self.set_html_input(idx, src_words, trg_words, attentions)
+            self.set_html_path('{}.{}'.format(self.report_path, str(idx)))
+        else:
+            pass
       # Append output to the outputs
       outputs.append(TextOutput(output_actions, self.trg_vocab))
     return outputs
