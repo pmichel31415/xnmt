@@ -1,5 +1,5 @@
 from __future__ import division, generators
-
+import pdb
 import dynet as dy
 import numpy as np
 import length_normalization
@@ -151,6 +151,12 @@ class DefaultTranslator(Translator, Serializable, HTMLReportable):
             attentions = self.attender.attention_vecs
             self.set_html_input(idx, src_words, trg_words, attentions)
             self.set_html_path('{}.{}'.format(self.report_path, str(idx)))
+        elif isinstance(sents,input.ArrayInput):
+            src_vectors = sents.get_array()
+            trg_words = [self.trg_vocab[w] for w in output_actions[1:]]
+            attentions = self.attender.attention_vecs
+            self.set_html_input(idx, src_vectors, trg_words, attentions)
+            self.set_html_path('{}.{}'.format(self.report_path, str(idx)))
         else:
             pass
       # Append output to the outputs
@@ -161,6 +167,7 @@ class DefaultTranslator(Translator, Serializable, HTMLReportable):
   def html_report(self, context=None):
     assert(context is None)
     idx, src, trg, att = self.html_input
+    inp_continuous = isinstance(src,np.ndarray) 
     path_to_report = self.html_path
     filename_of_report = os.path.basename(path_to_report)
     html = etree.Element('html')
@@ -169,14 +176,18 @@ class DefaultTranslator(Translator, Serializable, HTMLReportable):
     body = etree.SubElement(html, 'body')
     report = etree.SubElement(body, 'h1')
     if idx is not None:
-      title.text = report.text = 'Translation Report for Sentence %d' % (idx)
+      title.text = report.text = 'Seq2Seq Report for Sentence %d' % (idx)
     else:
-      title.text = report.text = 'Translation Report'
+      title.text = report.text = 'Seq2Seq Report'
     main_content = etree.SubElement(body, 'div', name='main_content')
 
     # Generating main content
-    captions = [u"Source Words", u"Target Words"]
-    inputs = [src, trg]
+    if inp_continuous:
+        captions = [u"Target Words"]
+        inputs = [trg]
+    else:    
+        captions = [u"Source Words", u"Target Words"]
+        inputs = [src, trg]
     for caption, inp in six.moves.zip(captions, inputs):
       if inp is None: continue
       sent = ' '.join(inp)
@@ -198,7 +209,10 @@ class DefaultTranslator(Translator, Serializable, HTMLReportable):
         attentions = np.concatenate([x.npvalue() for x in att], axis=1)
       elif type(att) != np.ndarray:
         raise RuntimeError("Illegal type for attentions in translator report: {}".format(type(attentions)))
-      plot.plot_attention(src, trg, attentions, file_name = attention_file)
+      if inp_continuous:
+        pass
+      else:
+        plot.plot_attention(src, trg, attentions, file_name = attention_file)
 
     # return the parent context to be used as child context
     return html
