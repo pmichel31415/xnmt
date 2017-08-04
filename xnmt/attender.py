@@ -1,8 +1,8 @@
 import dynet as dy
 from batcher import *
 from serializer import *
+from expression_sequence import ExpressionSequence
 import model_globals
-
 
 class Attender(object):
   '''
@@ -16,13 +16,16 @@ class Attender(object):
     pass
 
   def start_sent(self, sent):
-    raise NotImplementedError('start_sent must be implemented for Attender subclasses')
+    raise NotImplementedError('start_sent must be implemented for:', self.__class__.__name__)
 
-  def calc_attention(self, state):
-    raise NotImplementedError('calc_attention must be implemented for Attender subclasses')
+  def calc_attention(self, state, normalized=True):
+    raise NotImplementedError('calc_attention must be implemented for:', self.__class__.__name__)
 
+class TranslatorAttender(Attender):
+  def calc_context(self, state):
+    pass
 
-class StandardAttender(Attender, Serializable):
+class StandardAttender(TranslatorAttender, Serializable):
   '''
   Implements the attention model of Bahdanau et. al (2014)
   '''
@@ -46,22 +49,26 @@ class StandardAttender(Attender, Serializable):
   def start_sent(self, sent):
     self.attention_vecs = []
     self.curr_sent = sent
-    I = self.curr_sent.as_tensor()
+    I = self.curr_sent
+    if type(I) == ExpressionSequence:
+      I = I.as_tensor()
+    seq_len = I.dim()[0][1]
     W = dy.parameter(self.pW)
     b = dy.parameter(self.pb)
     self.WI = dy.affine_transform([b, W, I])
-    if len(self.curr_sent)==1:
+    if seq_len == 1:
       self.WI = dy.reshape(self.WI, (self.WI.dim()[0][0],1), batch_size=self.WI.dim()[1])
 
-  def calc_attention(self, state):
+  def calc_attention(self, state, normalized=True):
     V = dy.parameter(self.pV)
     U = dy.parameter(self.pU)
 
     h = dy.tanh(dy.colwise_add(self.WI, V * state))
     scores = dy.transpose(U * h)
-    normalized = dy.softmax(scores)
-    self.attention_vecs.append(normalized)
-    return normalized
+    if normalized:
+      scores = dy.softmax(scores)
+    self.attention_vecs.append(scores)
+    return scores
 
   def calc_context(self, state):
     attention = self.calc_attention(state)

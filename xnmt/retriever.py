@@ -7,6 +7,7 @@ import os
 import batcher
 import serializer
 import model
+import attender_sequence
 
 from decorators import recursive, recursive_assign
 from model import GeneratorModel
@@ -88,7 +89,9 @@ class DotProductRetriever(Retriever, Serializable, HTMLReportable):
   yaml_tag = u'!DotProductRetriever'
 
 
-  def __init__(self, src_embedder, src_encoder, trg_embedder, trg_encoder, database, loss_direction="forward"):
+  def __init__(self, src_embedder, src_encoder, trg_embedder,
+               trg_encoder, database, sequence_attender=None,
+               loss_direction="forward"):
     '''Constructor.
 
     :param src_embedder: A word embedder for the source language
@@ -104,6 +107,7 @@ class DotProductRetriever(Retriever, Serializable, HTMLReportable):
     self.trg_encoder = trg_encoder
     self.database = database
     self.loss_direction = loss_direction
+    self.sequence_attender = sequence_attender
 
     self.register_hier_child(self.src_encoder)
     self.register_hier_child(self.trg_encoder)
@@ -119,14 +123,26 @@ class DotProductRetriever(Retriever, Serializable, HTMLReportable):
       return dy.emax(exprseq.expr_list)
 
   def calc_loss(self, src, db_idx):
+    # src_encodings
     src_embeddings = self.src_embedder.embed_sent(src)
-    src_encodings = self.exprseq_pooling(self.src_encoder.transduce(src_embeddings))
-    trg_encodings = self.encode_trg_example(self.database[db_idx])
-    dim = trg_encodings.dim()
-    trg_reshaped = dy.reshape(trg_encodings, (dim[0][0], dim[1]))
-    prod = dy.transpose(src_encodings) * trg_reshaped
+    src_encodings = self.src_encoder.transduce(src_embeddings)
+    src_repr = self.exprseq_pooling(src_encodings)
+    # trg encodings
+    trg_embeddings = self.trg_embedder.embed_sent(self.database[db_idx])
+    trg_encodings = self.trg_encoder.transduce(trg_embeddings)
+    trg_repr = self.exprseq_pooling(trg_encodings)
+    # calculate the score between them
+    dim = trg_repr.dim()
+    trg_reshaped = dy.reshape(trg_repr, (dim[0][0], dim[1]))
+    ### incorporate the attention information
+    if self.sequence_attender is not None:
+      prod  = self.sequence_attender.atten_sequence(src_encodings.as_tensor(),
+                                                    trg_encodings.as_tensor(),
+                                                    full=True)
+    else:
+      prod = dy.transpose(src_repr) * trg_reshaped
     id_range = list(six.moves.range(len(db_idx)))
-    # This is ugly:
+    # TODO(neubig): This is ugly:
     if self.loss_direction == "forward":
       prod = dy.transpose(prod)
       loss = dy.sum_batches(dy.hinge_batch(prod, id_range))
@@ -136,7 +152,6 @@ class DotProductRetriever(Retriever, Serializable, HTMLReportable):
         dy.hinge_dim(prod, id_range, d=0) + dy.hinge_dim(prod, id_range, d=1))
     else:
       raise RuntimeError("Illegal loss direction {}".format(self.loss_direction))
-
     return loss
 
   def index_database(self, indices=None):
@@ -148,21 +163,37 @@ class DotProductRetriever(Retriever, Serializable, HTMLReportable):
       self.database.inverted_index = indices
     # Actually index everything
     self.database.indexed = []
+    self.database.trg_seq = []
     for index in indices:
       item = self.database.data[int(index)]
       dy.renew_cg()
-      self.database.indexed.append(self.encode_trg_example(item).npvalue())
-    self.database.indexed = np.stack(self.database.indexed, axis=1)
+      # trg encoding
+      trg_embeddings = self.trg_embedder.embed_sent(item)
+      trg_encodings = self.trg_encoder.transduce(trg_embeddings)
+      trg_repr = self.exprseq_pooling(trg_encodings).npvalue()
+      # storing the sequence also for attention
+      if self.sequence_attender is not None:
+        self.database.trg_seq.append(trg_encodings.as_tensor().npvalue())
+      else:
+        # store the npvalue
+        self.database.indexed.append(trg_repr)
 
-  def encode_trg_example(self, example):
-    embeddings = self.trg_embedder.embed_sent(example)
-    encodings = self.exprseq_pooling(self.trg_encoder.transduce(embeddings))
-    return encodings
+    if self.sequence_attender is None:
+      self.database.indexed = np.stack(self.database.indexed, axis=1)
 
   def generate(self, src, idx, return_type="idxscore", nbest=10):
     src_embedding = self.src_embedder.embed_sent(src)
-    src_encoding = dy.transpose(self.exprseq_pooling(self.src_encoder.transduce(src_embedding))).npvalue()
-    scores = np.dot(src_encoding, self.database.indexed)
+    src_encoding = self.src_encoder.transduce(src_embedding)
+    src_repr = dy.transpose(self.exprseq_pooling(src_encoding)).npvalue()
+    if self.sequence_attender is not None:
+      scores = []
+      for trg_encoding in self.database.trg_seq:
+        scores.append(self.sequence_attender.atten_sequence(src_encoding.as_tensor(),
+                                                           dy.inputTensor(trg_encoding),
+                                                           full=False).npvalue())
+      scores = np.expand_dims(np.hstack(scores), axis=0)
+    else:
+      scores = np.dot(src_repr, self.database.indexed)
     kbest = np.argsort(scores, axis=1)[0,-nbest:][::-1]
     ids = kbest if self.database.inverted_index == None else [self.database.inverted_index[x] for x in kbest]
     # In case of reporting
