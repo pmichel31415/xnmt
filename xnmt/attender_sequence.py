@@ -1,5 +1,4 @@
 import dynet as dy
-from decorators import TimeIt
 from serializer import Serializable
 
 class SequenceAttender(Serializable):

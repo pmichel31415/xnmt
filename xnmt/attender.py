@@ -21,11 +21,10 @@ class Attender(object):
   def calc_attention(self, state, normalized=True):
     raise NotImplementedError('calc_attention must be implemented for:', self.__class__.__name__)
 
-class TranslatorAttender(Attender):
   def calc_context(self, state):
-    pass
+    raise NotImplementedError('calc_context must be implemented for:', self.__class__.__name__)
 
-class StandardAttender(TranslatorAttender, Serializable):
+class StandardAttender(Attender, Serializable):
   '''
   Implements the attention model of Bahdanau et. al (2014)
   '''
