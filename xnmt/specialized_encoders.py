@@ -85,16 +85,11 @@ class TilburgSpeechEncoder(Encoder, Serializable):
         rhn_out = [sum(x) for x in zip(rhn_out, rhn_in)]
       rhn_in = rhn_out
     # Compute the attention-weighted average of the activations
-    #scores = [dy.transpose(dy.parameter(self.attention[0][1]))*dy.tanh(dy.parameter(self.attention[0][0])*x) for x in rhn_in] 
-    rhn_in = ExpressionSequence(expr_list = rhn_in)
-    scores = dy.transpose(dy.parameter(self.attention[0][1]))*dy.tanh(dy.parameter(self.attention[0][0])*rhn_in.as_tensor()) # ((1,510), batch_size)
-    #print('\n===> Check the dim of Wx, expected ((128,510), batch_size) : ', dy.tanh(dy.parameter(self.attention[0][0])*rhn_in.as_tensor()).dim())
-    #print('\n===> Check the dim of scors, expected ((510,), batch_size) : ', scores.dim())
-    #input('press to continue...')
-    #attn_out = rhn_in.as_tensor()*dy.softmax(scores) # rhn_in.as_tensor() is ((1024,510), batch_size) softmax is ((510,), batch_size)
-    #print('\n===> Check the dim of attn_out, expected ((1024,), batch_size) : ', attn_out.dim())
+    #rhn_in = ExpressionSequence(expr_list = rhn_in)
+    rhn_in = dy.concatenate_cols(rhn_in)
+    scores = dy.transpose(dy.parameter(self.attention[0][1]))*dy.tanh(dy.parameter(self.attention[0][0])*rhn_in) # ((1,510), batch_size)
     scores = dy.reshape(scores, (scores.dim()[0][1],), batch_size = scores.dim()[1])
-    attn_out = rhn_in.as_tensor()*dy.softmax(scores) # # rhn_in.as_tensor() is ((1024,510), batch_size) softmax is ((510,), batch_size)
+    attn_out = rhn_in*dy.softmax(scores) # # rhn_in.as_tensor() is ((1024,510), batch_size) softmax is ((510,), batch_size)
     return ExpressionSequence(expr_tensor = attn_out)
 
   def initial_state(self):
