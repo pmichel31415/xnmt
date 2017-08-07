@@ -2,6 +2,7 @@ import dynet as dy
 from attender import *
 from encoder import *
 import numpy as np
+from operator import add
 from expression_sequence import *
 
 # This is a file for specialized encoders that implement a particular model
@@ -35,14 +36,13 @@ class TilburgSpeechEncoder(Encoder, Serializable):
     self.recur  = []
     self.linear = []
     self.init   = []
+    self.attention = []
     
     input_dim = num_filters
     for l in range(rhn_num_hidden_layers):
       self.init.append(model.add_parameters((rhn_dim,)))
       self.linear.append((model.add_parameters((rhn_dim, input_dim)),
-                          model.add_parameters((rhn_dim,)),
-                          model.add_parameters((rhn_dim, input_dim,)),
-                          model.add_parameters((rhn_dim,))))
+                          model.add_parameters((rhn_dim, input_dim,))))
       input_dim = rhn_dim
       recur_layer = []
       for m in range(self.rhn_microsteps):
@@ -52,15 +52,11 @@ class TilburgSpeechEncoder(Encoder, Serializable):
                             model.add_parameters((rhn_dim,))))
       self.recur.append(recur_layer)
     # Attention layer  
-    self.attender = StandardAttender(self.rhn_dim, self.rhn_dim, attention_dim)
+    self.attention.append((model.add_parameters((attention_dim, rhn_dim)), 
+                           model.add_parameters(attention_dim, )))
     
   def transduce(self, src):
     src = src.as_tensor()
-    # src_height = src.dim()[0][0] # 37
-    # src_width = src.dim()[0][1] # 1024
-    # src_channels = 1
-    # batch_size = src.dim()[1]
-    # src = dy.reshape(src, (src_height, src_width, src_channels), batch_size=batch_size) #(37, 1024, 1)
     # convolutional layer
     l1 = dy.rectify(dy.conv2d(src, dy.parameter(self.filter_conv), stride = [self.stride, self.stride], is_valid = True))
     timestep = l1.dim()[0][1]
@@ -79,16 +75,26 @@ class TilburgSpeechEncoder(Encoder, Serializable):
           H = dy.affine_transform([dy.parameter(self.recur[l][m][1]), dy.parameter(self.recur[l][m][0]),  prev_state])
           T = dy.affine_transform([dy.parameter(self.recur[l][m][3]), dy.parameter(self.recur[l][m][2]),  prev_state])
           if m == 0:
-            H += dy.affine_transform([dy.parameter(self.linear[l][1]), dy.parameter(self.linear[l][0]), rhn_in[t]])
-            T += dy.affine_transform([dy.parameter(self.linear[l][3]), dy.parameter(self.linear[l][2]), rhn_in[t]])
+            H += dy.parameter(self.linear[l][0]) * rhn_in[t]
+            T += dy.parameter(self.linear[l][1]) * rhn_in[t]
           H = dy.tanh(H)
           T = dy.logistic(T)
           prev_state = dy.cmult(1 - T, prev_state) + dy.cmult(T, H) # ((1024, ), batch_size)
         rhn_out.append(prev_state)
+      if self.residual and l>0:
+        rhn_out = [sum(x) for x in zip(rhn_out, rhn_in)]
       rhn_in = rhn_out
     # Compute the attention-weighted average of the activations
-    attn_out = dy.emax(rhn_in)
-    #self.attender.start_sent(ExpressionSequence(expr_tensor=rhn_in))
+    #scores = [dy.transpose(dy.parameter(self.attention[0][1]))*dy.tanh(dy.parameter(self.attention[0][0])*x) for x in rhn_in] 
+    rhn_in = ExpressionSequence(expr_list = rhn_in)
+    scores = dy.transpose(dy.parameter(self.attention[0][1]))*dy.tanh(dy.parameter(self.attention[0][0])*rhn_in.as_tensor()) # ((1,510), batch_size)
+    #print('\n===> Check the dim of Wx, expected ((128,510), batch_size) : ', dy.tanh(dy.parameter(self.attention[0][0])*rhn_in.as_tensor()).dim())
+    #print('\n===> Check the dim of scors, expected ((510,), batch_size) : ', scores.dim())
+    #input('press to continue...')
+    #attn_out = rhn_in.as_tensor()*dy.softmax(scores) # rhn_in.as_tensor() is ((1024,510), batch_size) softmax is ((510,), batch_size)
+    #print('\n===> Check the dim of attn_out, expected ((1024,), batch_size) : ', attn_out.dim())
+    scores = dy.reshape(scores, (scores.dim()[0][1],), batch_size = scores.dim()[1])
+    attn_out = rhn_in.as_tensor()*dy.softmax(scores) # # rhn_in.as_tensor() is ((1024,510), batch_size) softmax is ((510,), batch_size)
     return ExpressionSequence(expr_tensor = attn_out)
 
   def initial_state(self):

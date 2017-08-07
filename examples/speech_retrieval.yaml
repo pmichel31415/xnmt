@@ -33,7 +33,8 @@ defaults:
               rhn_num_hidden_layers: 2
               rhn_dim: 1024
               rhn_microsteps: 2
-              attention_dim: 128 
+              attention_dim: 128
+              residual: True
 #            src_encoder: !HarwathSpeechEncoder
 #                filter_height: [40, 1, 1]
 #                filter_width: [5, 25, 25]
