@@ -85,7 +85,6 @@ class TilburgSpeechEncoder(Encoder, Serializable):
         rhn_out = [sum(x) for x in zip(rhn_out, rhn_in)]
       rhn_in = rhn_out
     # Compute the attention-weighted average of the activations
-    #rhn_in = ExpressionSequence(expr_list = rhn_in)
     rhn_in = dy.concatenate_cols(rhn_in)
     scores = dy.transpose(dy.parameter(self.attention[0][1]))*dy.tanh(dy.parameter(self.attention[0][0])*rhn_in) # ((1,510), batch_size)
     scores = dy.reshape(scores, (scores.dim()[0][1],), batch_size = scores.dim()[1])
