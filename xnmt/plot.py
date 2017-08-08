@@ -48,6 +48,7 @@ def plot_attention_continuous(src, trg_seq, attention_matrix, file_name=None):
   #can be mistaken
   #fig, ax = plt.subplots()
   fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
+  plt.subplots_adjust(wspace=0.01,hspace=0.01)
   # put the major ticks at the middle of each cell
   ax2.set_xticks(np.arange(attention_matrix.shape[1]) + 0.5, minor=False)
   #ax.set_yticks(np.arange(attention_matrix.shape[0]) + 0.5, minor=False)
@@ -57,16 +58,26 @@ def plot_attention_continuous(src, trg_seq, attention_matrix, file_name=None):
   ax2.set_xticklabels(trg_seq, minor=False)
   ax2.xaxis.tick_top()
   ax2.yaxis.set_visible(False)    
-
+  ax2.set_aspect('equal')
   # plot matrix of input sequence
   ax1.xaxis.set_visible(False)
   ax1.yaxis.set_visible(False)
-  #ax1.axis('off')  
-  feat_im = ax1.imshow(src.T, interpolation='nearest', cmap=plt.cm.coolwarm, origin='upper')
+  #ax1.axis('off') 
+  ax1.set_frame_on(False)
+  feat_im = ax1.imshow(src.T, interpolation='nearest',
+                       cmap=plt.cm.coolwarm, origin='upper'
+                       ,aspect='auto')
+  #ax1.set_aspect('equal')
+  ax1.set_aspect(aspect='auto',adjustable='box-forced') 
 
   # draw the heatmap for attention
-  att_im = plt.pcolor(attention_matrix, cmap=plt.cm.Blues, vmin=0, vmax=1)
+  #att_im = plt.pcolor(attention_matrix, cmap=plt.cm.Blues, vmin=0, vmax=1)
+  
+  att_im = plt.pcolor(attention_matrix, cmap=plt.cm.Blues, vmin=0, vmax=np.max(np.max(attention_matrix)))
   fig.colorbar(att_im, ax=ax2)
+  ax2.set_aspect(aspect='auto') 
+  
+
   #TODO Same shape for input seq and att matrix, remove border, stick plots
   #plt.subplots_adjust(wspace=0, hspace=0)
   if file_name != None:
