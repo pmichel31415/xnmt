@@ -71,7 +71,9 @@ class TilburgSpeechEncoder(Encoder, Serializable):
   def transduce(self, src):
     src = src.as_tensor()
     # convolutional layer
-    src = padding(src, src.dim()[0][0], src.dim()[0][1], self.filter_width, self.stride, src.dim()[1])
+    nchannels = 1
+    src = padding(src, self.filter_width + 3)
+    src = dy.reshape(src, (src.dim()[0][0], src.dim()[0][1], nchannels), batch_size=src.dim()[1])
     l1 = dy.rectify(dy.conv2d(src, dy.parameter(self.filter_conv), stride = [self.stride, self.stride], is_valid = True))
     timestep = l1.dim()[0][1]
     features = l1.dim()[0][2]
@@ -112,7 +114,7 @@ class TilburgSpeechEncoder(Encoder, Serializable):
 #  http://papers.nips.cc/paper/6186-unsupervised-learning-of-spoken-language-with-visual-context.pdf
 class HarwathSpeechEncoder(Encoder, Serializable):
   yaml_tag = u'!HarwathSpeechEncoder'
-  def __init__(self, filter_height, filter_width, channels, num_filters, stride):
+  def __init__(self, filter_height, filter_width, channels, num_filters, stride, dropouts=[0., 0., 0.]):
     """
     :param num_layers: depth of the RNN
     :param input_dim: size of the inputs
@@ -135,29 +137,40 @@ class HarwathSpeechEncoder(Encoder, Serializable):
                                          init=normalInit)
     self.filters3 = model.add_parameters(dim=(self.filter_height[2], self.filter_width[2], self.channels[2], self.num_filters[2]),
                                          init=normalInit)
+    self.dropouts = dropouts
 
+  def set_train(self, val):
+    self.val = val
+  
   def transduce(self, src):
     src = src.as_tensor()
 
     src_height = src.dim()[0][0]
     src_width = src.dim()[0][1]
-    # src_channels = 1
+    src_channels = 1
     batch_size = src.dim()[1]
 
+    # Set dropout values
+    dropouts = [dropout if self.val else 0.0 for dropout in self.dropouts]
+    print('=========> dropout values: ', dropouts)
     # convolution and pooling layers
     # src dim is ((40, 1000), 128)
+    src = dy.reshape(src, (src_height, src_width, src_channels), batch_size=batch_size)
     src = padding(src, self.filter_width[0]+3)
+    
     l1 = dy.rectify(dy.conv2d(src, dy.parameter(self.filters1), stride = [self.stride[0], self.stride[0]], is_valid = True)) # ((1, 1000, 64), 128)
     pool1 = dy.maxpooling2d(l1, (1, 4), (1,2), is_valid = True) #((1, 499, 64), 128)
-
     pool1 = padding(pool1, self.filter_width[1]+3)
+    pool1 = dy.dropout_batch(pool1, dropouts[0])
+
     l2 = dy.rectify(dy.conv2d(pool1, dy.parameter(self.filters2), stride = [self.stride[1], self.stride[1]], is_valid = True))# ((1, 499, 512), 128)
     pool2 = dy.maxpooling2d(l2, (1, 4), (1,2), is_valid = True)#((1, 248, 512), 128)
-
     pool2 = padding(pool2, self.filter_width[2])
+    pool2 = dy.dropout_batch(pool2, dropouts[1])
+
     l3 = dy.rectify(dy.conv2d(pool2, dy.parameter(self.filters3), stride = [self.stride[2], self.stride[2]], is_valid = True))# ((1, 248, 1024), 128)
     pool3 = dy.max_dim(l3, d = 1)
-
+    pool3 = dy.dropout_batch(pool3, dropouts[2])
     my_norm = dy.l2_norm(pool3) + 1e-6
     output = dy.cdiv(pool3,my_norm)
     output = dy.reshape(output, (self.num_filters[2],), batch_size = batch_size)
