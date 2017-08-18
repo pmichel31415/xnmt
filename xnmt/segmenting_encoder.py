@@ -28,6 +28,7 @@ class SegmentingEncoderBuilder(HierarchicalModel, Reportable):
     self.learn_segmentation = learn_segmentation
 
     # The Segment Encoder decides whether to segment or not
+    # TODO: fix len(self.SegmentingAction)
     self.segment_transform = linear.Linear(embed_encoder.hidden_dim, len(self.SegmentingAction), model)
 
     # The Segment transducer predict a category based on the collected vector
