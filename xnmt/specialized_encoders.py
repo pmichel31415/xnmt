@@ -157,20 +157,22 @@ class HarwathSpeechEncoder(Encoder, Serializable):
     # src dim is ((40, 1000), 128)
     src = dy.reshape(src, (src_height, src_width, src_channels), batch_size=batch_size)
     src = padding(src, self.filter_width[0]+3)
-    
+    src = dy.dropout_batch(src, dropouts[0]) 
     l1 = dy.rectify(dy.conv2d(src, dy.parameter(self.filters1), stride = [self.stride[0], self.stride[0]], is_valid = True)) # ((1, 1000, 64), 128)
     pool1 = dy.maxpooling2d(l1, (1, 4), (1,2), is_valid = True) #((1, 499, 64), 128)
     pool1 = padding(pool1, self.filter_width[1]+3)
-    pool1 = dy.dropout_batch(pool1, dropouts[0])
+    pool1 = dy.dropout_batch(pool1, dropouts[1])
 
+    print('======> pooling layer 1:\n', pool1.value())
     l2 = dy.rectify(dy.conv2d(pool1, dy.parameter(self.filters2), stride = [self.stride[1], self.stride[1]], is_valid = True))# ((1, 499, 512), 128)
     pool2 = dy.maxpooling2d(l2, (1, 4), (1,2), is_valid = True)#((1, 248, 512), 128)
     pool2 = padding(pool2, self.filter_width[2])
-    pool2 = dy.dropout_batch(pool2, dropouts[1])
+    pool2 = dy.dropout_batch(pool2, dropouts[2])
+    print('======> pooling layer 2:\n', pool2.value())
 
     l3 = dy.rectify(dy.conv2d(pool2, dy.parameter(self.filters3), stride = [self.stride[2], self.stride[2]], is_valid = True))# ((1, 248, 1024), 128)
     pool3 = dy.max_dim(l3, d = 1)
-    pool3 = dy.dropout_batch(pool3, dropouts[2])
+    print('======> pooling layer 3:\n', pool3.value()) 
     my_norm = dy.l2_norm(pool3) + 1e-6
     output = dy.cdiv(pool3,my_norm)
     output = dy.reshape(output, (self.num_filters[2],), batch_size = batch_size)
