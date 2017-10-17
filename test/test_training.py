@@ -194,7 +194,8 @@ class TestTrainDevLoss(unittest.TestCase):
     xnmt_trainer.model_context = self.model_context
     xnmt_trainer.run_epoch(update_weights=False)
     self.assertAlmostEqual(xnmt_trainer.logger.epoch_loss.loss_values['loss'] / xnmt_trainer.logger.epoch_words,
-                           xnmt_trainer.logger.dev_score.loss)
+                           xnmt_trainer.logger.dev_score.loss,
+                           5)
 
 class TestOverfitting(unittest.TestCase):
 
