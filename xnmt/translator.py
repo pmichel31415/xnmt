@@ -88,6 +88,9 @@ class DefaultTranslator(Translator, Serializable, Reportable):
             DependentInitParam(param_descr="src_embedder.vocab", value_fct=lambda: self.yaml_context.corpus_parser.src_reader.vocab),
             DependentInitParam(param_descr="trg_embedder.vocab", value_fct=lambda: self.yaml_context.corpus_parser.trg_reader.vocab)]
 
+  def set_target_vocab(self, vocab):
+    self.loss_calculator.set_target_vocab(vocab)
+
   def initialize_generator(self, **kwargs):
     if kwargs.get("len_norm_type", None) is None:
       len_norm = xnmt.length_normalization.NoNormalization()

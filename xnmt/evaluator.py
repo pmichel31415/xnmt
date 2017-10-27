@@ -3,6 +3,8 @@ import numpy as np
 import math
 import six
 import functools
+import io
+import treetaggerwrapper
 from collections import defaultdict, Counter, deque
 
 from xnmt.vocab import Vocab
@@ -409,3 +411,55 @@ class MeanAvgPrecisionEvaluator(object):
         avg += score
     avg = avg/float(len(ref))
     return MeanAvgPrecisionScore(avg, len(hyp), len(ref), nbest=self.nbest)
+
+class POSTagMLEEvaluator(object):
+  def __init__(self, data_file):
+    self.transition_matrix = None
+    self.i2tag = []
+    self.tag2i = {}
+    self.data_file = data_file
+    self.tagger = treetaggerwrapper.TreeTagger(TAGLANG='en')
+
+  def populate_tag_vocab(self):
+    tag_seqs = []
+    for string in io.open(self.data_file, encoding="utf-8"):
+     try:
+       tags = self.tagger.tag_text(string)
+     except:
+       continue
+
+     seq = [tag.split("\t")[1] if len(tag.split("\t")) > 1 else tag.split("\t")[0] for tag in tags]
+     mod_seq = ["text" if "text" in tag else tag for tag in seq]
+     for tag in mod_seq:
+       if tag not in self.tag2i:
+         self.tag2i[tag] = len(self.i2tag)
+         self.i2tag.append(tag)
+
+     tag_seqs.append(mod_seq)
+
+  def populate_transition_matrix(self, tag_seqs):
+    self.transition_matrix = np.ones((len(self.i2tag), len(self.i2tag)))
+    for seq in tag_seqs:
+      for i in range(1, len(seq)):
+        self.transition_matrix[self.tag2i[seq[i-1]]][self.tag2i[seq[i]]] += 1
+
+    self.transition_matrix = self.transition_matrix / np.sum(self.transition_matrix, axis=0)
+
+  def set_vocab(self, vocab):
+    self.vocab = vocab
+
+  def evaluate(self, sequence):
+   words = [self.vocab.i2w[i]for i in sequence]
+   string =  u" ".join(words)
+   try:
+     tags = self.tagger.tag_text(string)
+   except:
+     return 0
+   seq = [tag.split("\t")[1] if len(tag.split("\t")) > 1 else tag.split("\t")[0] for tag in tags]
+   mod_seq = ["text" if "text" in tag else tag for tag in seq]
+   score = 0
+   for i in range(1, len(mod_seq)):
+     score += np.log(self.transition_matrix[seq[i - 1], seq[i]])
+   score /= len(mod_seq)
+   score = np.exp(score)
+   return score

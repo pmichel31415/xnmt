@@ -30,6 +30,8 @@ class TrainingStrategy(Serializable, HierarchicalModel):
   def __call__(self, translator, dec_state, src, trg):
       return self.loss_calculator(translator, dec_state, src, trg)
 
+  def set_target_vocab(self, vocab):
+    self.loss_calculator.set_vocab(vocab)
 
 class TrainingMLELoss(Serializable):
   yaml_tag = '!TrainingMLELoss'
@@ -59,17 +61,23 @@ class TrainingMLELoss(Serializable):
 class TrainingReinforceLoss(Serializable, HierarchicalModel):
   yaml_tag = '!TrainingReinforceLoss'
 
-  def __init__(self, yaml_context, evaluation_metric=None, sample_length=50, use_baseline=False, decoder_hidden_dim=None):
+  def __init__(self, yaml_context, evaluation_metric=None, sample_length=50, use_baseline=False, decoder_hidden_dim=None, add_reward=None):
     self.sample_length = sample_length
     if evaluation_metric is None:
       self.evaluation_metric = xnmt.evaluator.BLEUEvaluator(ngram=4, smooth=1)
     else:
       self.evaluation_metric = evaluation_metric
+    if add_reward:
+      self.additional_reward = add_reward
     self.use_baseline = use_baseline
     if self.use_baseline:
       model = yaml_context.dynet_param_collection.param_col
       decoder_hidden_dim = decoder_hidden_dim or yaml_context.default_layer_dim
       self.baseline = linear.Linear(input_dim=decoder_hidden_dim, output_dim=1, model=model)
+
+  def set_vocab(self, vocab):
+    if self.additional_reward:
+      self.additional_reward.set_vocab(vocab)
 
   def __call__(self, translator, dec_state, src, trg):
     # TODO: apply trg.mask ?
@@ -112,6 +120,8 @@ class TrainingReinforceLoss(Serializable, HierarchicalModel):
         pass
       # Calculate the evaluation score
       score = 0 if not len(sample_i) else self.evaluation_metric.evaluate_fast(trg_i.words, sample_i)
+      if self.additional_reward:
+        score += self.additional_reward.evaluate(sample_i)
       self.eval_score.append(score)
     self.true_score = dy.inputTensor(self.eval_score, batched=True)
     loss = LossBuilder()
