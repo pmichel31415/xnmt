@@ -444,7 +444,9 @@ class POSTagMLEEvaluator(Serializable, HierarchicalModel):
 
   def populate_transition_matrix(self, tag_seqs):
     self.transition_matrix = np.ones((len(self.i2tag), len(self.i2tag)))
-    for seq in tag_seqs:
+    for k, seq in enumerate(tag_seqs):
+#      if k % 1000 == 0:
+#        print(k)
       for i in range(1, len(seq)):
         self.transition_matrix[self.tag2i[seq[i-1]]][self.tag2i[seq[i]]] += 1
 
@@ -463,11 +465,18 @@ class POSTagMLEEvaluator(Serializable, HierarchicalModel):
    seq = [tag.split("\t")[1] if len(tag.split("\t")) > 1 else tag.split("\t")[0] for tag in tags]
    mod_seq = ["text" if "text" in tag else tag for tag in seq]
    score = 0
+   len1 = 0
    for i in range(1, len(mod_seq)):
      try:
        score += np.log(self.transition_matrix[self.tag2i[seq[i - 1]], self.tag2i[seq[i]]])
+       len1 += 1
      except KeyError:
+       len1 -= 1
+       print("Timeout")
        pass
-   score /= len(mod_seq)
+   if len1 > 0:
+     score /= len1
+   else:
+     return 0
    score = np.exp(score)
    return score

@@ -67,6 +67,7 @@ class TrainingReinforceLoss(Serializable, HierarchicalModel):
       self.evaluation_metric = xnmt.evaluator.BLEUEvaluator(ngram=4, smooth=1)
     else:
       self.evaluation_metric = evaluation_metric
+    self.additional_reward = None
     if add_reward:
       self.additional_reward = add_reward
     self.use_baseline = use_baseline
@@ -106,6 +107,7 @@ class TrainingReinforceLoss(Serializable, HierarchicalModel):
 
     samples = np.stack(samples, axis=1).tolist()
     self.eval_score = []
+    self.add_score = []
     for trg_i, sample_i in zip(trg, samples):
       # Removing EOS
       try:
@@ -121,11 +123,15 @@ class TrainingReinforceLoss(Serializable, HierarchicalModel):
       # Calculate the evaluation score
       score = 0 if not len(sample_i) else self.evaluation_metric.evaluate_fast(trg_i.words, sample_i)
       if self.additional_reward:
-        score += self.additional_reward.evaluate(sample_i)
+        self.add_score.append(self.additional_reward.evaluate(sample_i))
       self.eval_score.append(score)
     self.true_score = dy.inputTensor(self.eval_score, batched=True)
     loss = LossBuilder()
 
+    if self.additional_reward:
+      self.add_reward = dy.inputTensor(self.add_score, batched=True)
+      loss.add_loss("Additional Loss", dy.sum_elems(dy.cmult(-self.add_reward, dy.esum(logsofts))))
+       
     if self.use_baseline:
       for i, (score, _) in enumerate(zip(self.bs, logsofts)):
         logsofts[i] = dy.cmult(logsofts[i], score - self.true_score)
