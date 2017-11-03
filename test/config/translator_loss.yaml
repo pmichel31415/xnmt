@@ -36,6 +36,8 @@ reinforce:
       loss_calculator: !TrainingReinforceLoss
         use_baseline: True
         decoder_hidden_dim: 32
+        add_reward: !POSTagMLEEval
+          data_file: examples/data/head.en
     model: !DefaultTranslator
       src_embedder: !SimpleWordEmbedder
         emb_dim: 32
