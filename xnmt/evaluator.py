@@ -445,13 +445,9 @@ class POSTagMLEEvaluator(Serializable, HierarchicalModel):
   def populate_transition_matrix(self, tag_seqs):
     self.transition_matrix = np.ones((len(self.i2tag), len(self.i2tag)))
     for k, seq in enumerate(tag_seqs):
-#      if k % 1000 == 0:
-#        print(k)
       for i in range(1, len(seq)):
         self.transition_matrix[self.tag2i[seq[i-1]]][self.tag2i[seq[i]]] += 1
-    print(self.transition_matrix)
     self.transition_matrix = self.transition_matrix / np.sum(self.transition_matrix, axis=0)
-    print(self.transition_matrix)
   def set_vocab(self, vocab):
     self.vocab = vocab
 
@@ -472,7 +468,6 @@ class POSTagMLEEvaluator(Serializable, HierarchicalModel):
        len1 += 1
      except KeyError:
        len1 -= 1
-       print("Timeout")
        pass
 
    if len1 > 0:

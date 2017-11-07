@@ -130,7 +130,7 @@ class TrainingReinforceLoss(Serializable, HierarchicalModel):
 
     if self.additional_reward:
       self.add_reward = dy.inputTensor(self.add_score, batched=True)
-      loss.add_loss("Additional Loss", dy.sum_elems(dy.cmult(-self.add_reward, dy.esum(logsofts))))
+      loss.add_loss("Additional Loss", dy.sum_elems(dy.cmult(-self.add_reward, dy.esum(logsofts)))*0.0)
        
     if self.use_baseline:
       for i, (score, _) in enumerate(zip(self.bs, logsofts)):
@@ -138,7 +138,7 @@ class TrainingReinforceLoss(Serializable, HierarchicalModel):
       loss.add_loss("Reinforce", dy.sum_elems(dy.esum(logsofts)))
 
     else:
-        loss.add_loss("Reinforce", dy.sum_elems(dy.cmult(-self.true_score, dy.esum(logsofts))))
+      loss.add_loss("Reinforce", dy.sum_elems(dy.cmult(-self.true_score, dy.esum(logsofts))))
 
     if self.use_baseline:
       baseline_loss = []
