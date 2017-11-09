@@ -206,7 +206,8 @@ class YamlSerializer(object):
         initialized_obj = obj.__class__(**init_params)
         if xnmt_id:
           self.initialized_shared_components[xnmt_id] = initialized_obj
-        print("initialized %s(%s)" % (obj.__class__.__name__, init_params))
+        if obj.__class__.__name__ != "Vocab":
+          print("initialized %s(%s)" % (obj.__class__.__name__, init_params))
     except TypeError as e:
       raise ComponentInitError("%s could not be initialized using params %s, expecting params %s. "
                                "Error message: %s" % (type(obj), init_params, init_args, str(e)))
