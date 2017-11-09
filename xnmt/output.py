@@ -19,7 +19,8 @@ class TextOutput(Output):
     self.filtered_tokens = set([Vocab.SS, Vocab.ES])
 
   def to_string(self):
-    return six.moves.map(lambda wi: self.vocab[wi], filter(lambda wi: wi not in self.filtered_tokens, self.actions))
+    s =  six.moves.map(lambda wi: self.vocab[wi], filter(lambda wi: wi not in self.filtered_tokens, self.actions))
+    return s
 
 class OutputProcessor(object):
   def process_outputs(self, outputs):
@@ -31,6 +32,11 @@ class PlainTextOutputProcessor(OutputProcessor):
   with one sent per line.
   '''
   def process_outputs(self, outputs):
+    if type(outputs[0]) == list:
+      out = []
+      for output in outputs:
+        out.append([self.words_to_string(outp.to_string()) for outp in output])
+      return out
     return [self.words_to_string(output.to_string()) for output in outputs]
 
   def words_to_string(self, word_list):

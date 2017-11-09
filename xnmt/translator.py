@@ -69,6 +69,9 @@ class DefaultTranslator(Translator, Serializable, Reportable):
     self.attender = attender
     self.trg_embedder = trg_embedder
     self.decoder = decoder
+    self.intermediate_file = "examples/output/standat_score.txt"
+    self.pos = xnmt.evaluator.POSTagMLEEvaluator("examples/data/head.en")
+
 
     self.register_hier_child(self.encoder)
     self.register_hier_child(self.decoder)
@@ -89,7 +92,10 @@ class DefaultTranslator(Translator, Serializable, Reportable):
             DependentInitParam(param_descr="trg_embedder.vocab", value_fct=lambda: self.yaml_context.corpus_parser.trg_reader.vocab)]
 
   def set_target_vocab(self, vocab):
-    self.loss_calculator.set_target_vocab(vocab)
+    if hasattr(self.loss_calculator, "set_target_vocab"):
+      self.loss_calculator.set_target_vocab(vocab)
+    if self.pos is not None:
+      self.pos.set_vocab(vocab)
 
   def initialize_generator(self, **kwargs):
     if kwargs.get("len_norm_type", None) is None:
@@ -127,6 +133,11 @@ class DefaultTranslator(Translator, Serializable, Reportable):
     return self.loss_calculator(self, dec_state, src, trg)
 
   def generate(self, src, idx, src_mask=None, forced_trg_ids=None):
+    list_output = False
+    self.inter_file = None
+    if self.intermediate_file is not None:
+      self.inter_file = open(self.intermediate_file, 'a')
+      list_output = True
     if not xnmt.batcher.is_batched(src):
       src = xnmt.batcher.mark_as_batch([src])
     else:
@@ -139,7 +150,15 @@ class DefaultTranslator(Translator, Serializable, Reportable):
       self.attender.init_sent(encodings)
       ss = mark_as_batch([Vocab.SS] * len(src)) if is_batched(src) else Vocab.SS
       dec_state = self.decoder.initial_state(self.encoder.get_final_states(), self.trg_embedder.embed(ss))
-      output_actions, score = self.search_strategy.generate_output(self.decoder, self.attender, self.trg_embedder, dec_state, src_length=len(sents), forced_trg_ids=forced_trg_ids)
+      output_actions, scores = self.search_strategy.generate_output(self.decoder, self.attender, self.trg_embedder, dec_state, src_length=len(sents), forced_trg_ids=forced_trg_ids, return_list=list_output)
+      if self.inter_file is not None:
+        string = ''
+        for i in range(len(output_actions)):
+          string = string + "| " + str(scores[i])
+          score = self.pos.evaluate(output_actions[i])
+          string = string + "," + str(score)
+        string += '\n'
+        self.inter_file.write(string)
       # In case of reporting
       if self.report_path is not None:
         src_words = [self.reporting_src_vocab[w] for w in sents]
@@ -151,9 +170,16 @@ class DefaultTranslator(Translator, Serializable, Reportable):
         self.generate_report(self.report_type)
       # Append output to the outputs
       if hasattr(self, "trg_vocab") and self.trg_vocab is not None:
-        outputs.append(TextOutput(output_actions, self.trg_vocab))
+        if self.inter_file is not None:
+          out = []
+          for output_action in output_actions:
+            out.append(TextOutput(output_action, self.trg_vocab))
+          outputs.append(out)
+        else:
+          outputs.append(TextOutput(output_actions, self.trg_vocab))
       else:
         outputs.append((output_actions, score))
+    self.inter_file.close()
     return outputs
 
   def set_reporting_src_vocab(self, src_vocab):

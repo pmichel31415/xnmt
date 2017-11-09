@@ -86,7 +86,12 @@ def xnmt_decode(args, model_elements=None):
         outputs = NO_DECODING_ATTEMPTED
       else:
         dy.renew_cg()
-        outputs = generator.generate_output(src, i)
+        output = generator.generate_output(src, i)
+      outputs = output
+      if type(outputs) == list:
+        outputs = ''
+        for out in output:
+          outputs = outputs + out + "|"
       # Printing to trg file
       fp.write(u"{}\n".format(outputs))
 

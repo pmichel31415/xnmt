@@ -115,9 +115,9 @@ class XnmtTrainer(object):
     else:
       self.training_strategy = TrainingStrategy(TrainingMLELoss())
 
-    if self.training_strategy.loss_calculator.__class__ == TrainingReinforceLoss:
-        self.training_strategy.loss_calculator.set_vocab(self.corpus_parser.trg_reader.vocab)
+
     self.model.initialize_training_strategy(self.training_strategy)
+    self.model.set_target_vocab(self.corpus_parser.trg_reader.vocab)
 
     if self.args.batcher is None:
       self.batcher = SrcBatcher(32)

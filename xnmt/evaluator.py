@@ -6,10 +6,12 @@ import functools
 import io
 import treetaggerwrapper
 from collections import defaultdict, Counter, deque
+import os
 
 from xnmt.hier_model import HierarchicalModel
 from xnmt.serializer import Serializable
 from xnmt.vocab import Vocab
+
 
 class EvalScore(object):
   def higher_is_better(self):
@@ -445,13 +447,9 @@ class POSTagMLEEvaluator(Serializable, HierarchicalModel):
   def populate_transition_matrix(self, tag_seqs):
     self.transition_matrix = np.ones((len(self.i2tag), len(self.i2tag)))
     for k, seq in enumerate(tag_seqs):
-#      if k % 1000 == 0:
-#        print(k)
       for i in range(1, len(seq)):
         self.transition_matrix[self.tag2i[seq[i-1]]][self.tag2i[seq[i]]] += 1
-
     self.transition_matrix = self.transition_matrix / np.sum(self.transition_matrix, axis=0)
-
   def set_vocab(self, vocab):
     self.vocab = vocab
 
@@ -472,11 +470,13 @@ class POSTagMLEEvaluator(Serializable, HierarchicalModel):
        len1 += 1
      except KeyError:
        len1 -= 1
-       print("Timeout")
        pass
+
    if len1 > 0:
      score /= len1
    else:
      return 0
    score = np.exp(score)
    return score
+
+

@@ -31,11 +31,11 @@ class TrainingStrategy(Serializable, HierarchicalModel):
       return self.loss_calculator(translator, dec_state, src, trg)
 
   def set_target_vocab(self, vocab):
-    self.loss_calculator.set_vocab(vocab)
+    if hasattr(self.loss_calculator, "set_vocab"):
+      self.loss_calculator.set_vocab(vocab)
 
 class TrainingMLELoss(Serializable):
   yaml_tag = '!TrainingMLELoss'
-
   def __call__(self, translator, dec_state, src, trg):
     trg_mask = trg.mask if xnmt.batcher.is_batched(trg) else None
     losses = []
@@ -130,7 +130,7 @@ class TrainingReinforceLoss(Serializable, HierarchicalModel):
 
     if self.additional_reward:
       self.add_reward = dy.inputTensor(self.add_score, batched=True)
-      loss.add_loss("Additional Loss", dy.sum_elems(dy.cmult(-self.add_reward, dy.esum(logsofts))))
+      loss.add_loss("Additional Loss", dy.sum_elems(dy.cmult(-self.add_reward, dy.esum(logsofts)))*0.0)
        
     if self.use_baseline:
       for i, (score, _) in enumerate(zip(self.bs, logsofts)):
@@ -138,7 +138,7 @@ class TrainingReinforceLoss(Serializable, HierarchicalModel):
       loss.add_loss("Reinforce", dy.sum_elems(dy.esum(logsofts)))
 
     else:
-        loss.add_loss("Reinforce", dy.sum_elems(dy.cmult(-self.true_score, dy.esum(logsofts))))
+      loss.add_loss("Reinforce", dy.sum_elems(dy.cmult(-self.true_score, dy.esum(logsofts))))
 
     if self.use_baseline:
       baseline_loss = []
