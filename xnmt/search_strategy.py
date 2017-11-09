@@ -56,7 +56,7 @@ class BeamSearch(SearchStrategy):
     def __repr__(self):
       return "hypo S=%s |ids|=%s" % (self.score, len(self.id_list))
 
-  def generate_output(self, decoder, attender, output_embedder, dec_state, src_length=None, forced_trg_ids=None):
+  def generate_output(self, decoder, attender, output_embedder, dec_state, src_length=None, forced_trg_ids=None, return_list=False):
     """
     :param decoder: decoder.Decoder subclass
     :param attender: attender.Attender subclass
@@ -105,6 +105,10 @@ class BeamSearch(SearchStrategy):
       completed_hyp = active_hyp
 
     self.len_norm.normalize_completed(completed_hyp, src_length)
-
-    result = sorted(completed_hyp, key=lambda x: x.score, reverse=True)[0]
-    return result.id_list, result.score
+    result = sorted(completed_hyp, key=lambda x: x.score, reverse=True)
+    if return_list:
+      id_lists, scores = [], []
+      for res in result:
+        id_lists.append(res.id_list); scores.append(res.score)
+      return id_lists, scores
+    return result[0].id_list, result[0].score

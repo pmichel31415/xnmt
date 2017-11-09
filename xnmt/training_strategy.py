@@ -31,11 +31,11 @@ class TrainingStrategy(Serializable, HierarchicalModel):
       return self.loss_calculator(translator, dec_state, src, trg)
 
   def set_target_vocab(self, vocab):
-    self.loss_calculator.set_vocab(vocab)
+    if hasattr(self.loss_calculator, "set_vocab"):
+      self.loss_calculator.set_vocab(vocab)
 
 class TrainingMLELoss(Serializable):
   yaml_tag = '!TrainingMLELoss'
-
   def __call__(self, translator, dec_state, src, trg):
     trg_mask = trg.mask if xnmt.batcher.is_batched(trg) else None
     losses = []

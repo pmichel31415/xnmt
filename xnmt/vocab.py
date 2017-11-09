@@ -60,7 +60,6 @@ class Vocab(Serializable):
         return self.unk_token
       self.w2i[w] = len(self.i2w)
       self.i2w.append(w)
-      print(self.w2i.keys())
     return self.w2i[w]
 
   def __getitem__(self, i):

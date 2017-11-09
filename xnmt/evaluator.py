@@ -6,10 +6,12 @@ import functools
 import io
 import treetaggerwrapper
 from collections import defaultdict, Counter, deque
+import os
 
 from xnmt.hier_model import HierarchicalModel
 from xnmt.serializer import Serializable
 from xnmt.vocab import Vocab
+
 
 class EvalScore(object):
   def higher_is_better(self):
@@ -476,3 +478,5 @@ class POSTagMLEEvaluator(Serializable, HierarchicalModel):
      return 0
    score = np.exp(score)
    return score
+
+
