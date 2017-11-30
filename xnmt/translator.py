@@ -69,8 +69,8 @@ class DefaultTranslator(Translator, Serializable, Reportable):
     self.attender = attender
     self.trg_embedder = trg_embedder
     self.decoder = decoder
-    self.intermediate_file = "examples/output/standat_score.txt"
-    self.pos = xnmt.evaluator.POSTagMLEEvaluator("examples/data/head.en")
+    self.intermediate_file = "/projects/tir2/users/sjpadman/temp_data/score_linreg.txt"
+    self.pos = xnmt.evaluator.POSTagMLEEvaluator("/projects/tir2/users/sjpadman/temp_data/en.train.short")
 
 
     self.register_hier_child(self.encoder)
