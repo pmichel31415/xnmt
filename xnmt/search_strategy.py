@@ -7,8 +7,8 @@ class SearchStrategy(object):
   '''
   A template class to generate translation from the output probability model.
   '''
-  def generate_output(self, decoder, attender, output_embedder, dec_state, src_length=None, forced_trg_ids=None):
-    raise NotImplementedError('generate_output must be implemented in SearchStrategy subclasses')
+  def generate(self, decoder, attender, output_embedder, dec_state, src_length=None, forced_trg_ids=None):
+    raise NotImplementedError('generate must be implemented in SearchStrategy subclasses')
 
 class GreedySearch(SearchStrategy):
   '''
@@ -16,7 +16,7 @@ class GreedySearch(SearchStrategy):
   '''
   def __init__(self, max_len=100):
     self.max_len = max_len
-  def generate_output(self, decoder, attender, output_embedder, dec_state, src_length=None, forced_trg_ids=None):
+  def generate(self, decoder, attender, output_embedder, dec_state, src_length=None, forced_trg_ids=None):
     score = 0.0
     word_ids = []
 
@@ -56,7 +56,7 @@ class BeamSearch(SearchStrategy):
     def __repr__(self):
       return "hypo S=%s |ids|=%s" % (self.score, len(self.id_list))
 
-  def generate_output(self, decoder, attender, output_embedder, dec_state, src_length=None, forced_trg_ids=None):
+  def generate(self, decoder, attender, output_embedder, dec_state, src_length=None, forced_trg_ids=None):
     """
     :param decoder: decoder.Decoder subclass
     :param attender: attender.Attender subclass

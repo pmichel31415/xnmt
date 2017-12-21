@@ -44,7 +44,7 @@ class SimpleInference(Serializable):
     self.ref_file = ref_file
     self.max_src_len = max_src_len
     self.input_format = input_format
-    self.post_process = post_process
+    self.post_process = self.get_output_processor(post_process)
     self.report_path = report_path
     self.report_type = report_type
     self.beam = beam
@@ -61,18 +61,20 @@ class SimpleInference(Serializable):
     :param candidate_id_file: if we are doing something like retrieval where we select from fixed candidates, sometimes we want to limit our candidates to a certain subset of the full set. this setting allows us to do this.
     :param model_elements: If None, the model will be loaded from model_file. If set, should equal (corpus_parser, generator).
     """
-    args = dict(model_file=self.model_file, src_file=src_file or self.src_file, trg_file=trg_file or self.trg_file, ref_file=self.ref_file, max_src_len=self.max_src_len,
-                  input_format=self.input_format, post_process=self.post_process, candidate_id_file=candidate_id_file, report_path=self.report_path, report_type=self.report_type,
-                  beam=self.beam, max_len=self.max_len, len_norm_type=self.len_norm_type, mode=self.mode)
+    # args = dict(model_file=self.model_file, src_file=src_file or self.src_file, trg_file=trg_file or self.trg_file, ref_file=self.ref_file, max_src_len=self.max_src_len,
+    #               input_format=self.input_format, post_process=self.post_process, candidate_id_file=candidate_id_file, report_path=self.report_path, report_type=self.report_type,
+    #               beam=self.beam, max_len=self.max_len, len_norm_type=self.len_norm_type, mode=self.mode)
   
-    is_reporting = issubclass(generator.__class__, Reportable) and args["report_path"] is not None
+    src_file = src_file or self.src_file
+    trg_file = trg_file or self.trg_file
+    is_reporting = issubclass(generator.__class__, Reportable) and self.report_path is not None
     # Corpus
-    src_corpus = list(corpus_parser.src_reader.read_sents(args["src_file"]))
+    src_corpus = list(corpus_parser.src_reader.read_sents(src_file))
     # Get reference if it exists and is necessary
-    if args["mode"] == "forced" or args["mode"] == "forceddebug":
-      if args["ref_file"] == None:
-        raise RuntimeError("When performing {} decoding, must specify reference file".format(args["mode"]))
-      ref_corpus = list(corpus_parser.trg_reader.read_sents(args["ref_file"]))
+    if self.mode == "forced" or self.mode == "forceddebug":
+      if self.ref_file == None:
+        raise RuntimeError("When performing {} decoding, must specify reference file".format(self.mode))
+      ref_corpus = list(corpus_parser.trg_reader.read_sents(self.ref_file))
     else:
       ref_corpus = None
     # Vocab
@@ -80,11 +82,22 @@ class SimpleInference(Serializable):
     trg_vocab = corpus_parser.trg_reader.vocab if hasattr(corpus_parser.trg_reader, "vocab") else None
     # Perform initialization
     generator.set_train(False)
-    generator.initialize_generator(**args)
+    generator.initialize_generator(model_file=self.model_file,
+                                   src_file=src_file,
+                                   trg_file=trg_file,
+                                   ref_file=self.ref_file,
+                                   max_src_len=self.max_src_len,
+                                   input_format=self.input_format,
+                                   candidate_id_file=candidate_id_file,
+                                   report_path=self.report_path,
+                                   report_type=self.report_type,
+                                   beam=self.beam,
+                                   max_len=self.max_len,
+                                   len_norm_type=self.len_norm_type,
+                                   mode=self.mode)
   
     # TODO: Structure it better. not only Translator can have post processes
     if issubclass(generator.__class__, Translator):
-      generator.set_post_processor(self.get_output_processor())
       generator.set_trg_vocab(trg_vocab)
       generator.set_reporting_src_vocab(src_vocab)
   
@@ -94,7 +107,7 @@ class SimpleInference(Serializable):
   
     # If we're debugging, calculate the loss for each target sentence
     ref_scores = None
-    if args["mode"] == 'forceddebug':
+    if self.mode == 'forceddebug':
       some_batcher = xnmt.batcher.InOrderBatcher(32) # Arbitrary
       batched_src, batched_ref = some_batcher.pack(src_corpus, ref_corpus)
       ref_scores = []
@@ -105,27 +118,27 @@ class SimpleInference(Serializable):
       ref_scores = [-x for x in ref_scores]
   
     # Perform generation of output
-    with io.open(args["trg_file"], 'wt', encoding='utf-8') as fp:  # Saving the translated output to a trg file
+    with io.open(trg_file, 'wt', encoding='utf-8') as fp:  # Saving the translated output to a trg file
       src_ret=[]
       for i, src in enumerate(src_corpus):
         batcher.add_single_batch(src_curr=[src], trg_curr=None, src_ret=src_ret, trg_ret=None)
         src = src_ret.pop()[0]
         # Do the decoding
-        if args["max_src_len"] is not None and len(src) > args["max_src_len"]:
+        if self.max_src_len is not None and len(src) > self.max_src_len:
           output_txt = NO_DECODING_ATTEMPTED
         else:
           dy.renew_cg()
           ref_ids = ref_corpus[i] if ref_corpus != None else None
-          output = generator.generate_output(src, i, forced_trg_ids=ref_ids)
+          output = generator.generate(src, i, forced_trg_ids=ref_ids)
           # If debugging forced decoding, make sure it matches
           if ref_scores != None and (abs(output[0].score-ref_scores[i]) / abs(ref_scores[i])) > 1e-5:
             print('Forced decoding score {} and loss {} do not match at sentence {}'.format(output[0].score, ref_scores[i], i))
+          self.post_process.process_outputs(output)
           output_txt = output[0].plaintext
         # Printing to trg file
         fp.write(u"{}\n".format(output_txt))
   
-  def get_output_processor(self):
-    spec = self.post_process
+  def get_output_processor(self, spec):
     if spec == "none":
       return PlainTextOutputProcessor()
     elif spec == "join-char":

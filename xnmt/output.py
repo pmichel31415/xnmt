@@ -9,8 +9,8 @@ class Output(object):
     ''' Initialize an output with actions. '''
     self.actions = actions or []
 
-  def to_string(self):
-    raise NotImplementedError('All outputs must implement to_string.')
+  def to_tokens(self):
+    raise NotImplementedError('All outputs must implement to_tokens.')
 
 class TextOutput(Output):
   def __init__(self, actions=None, vocab=None, score=None):
@@ -19,7 +19,7 @@ class TextOutput(Output):
     self.score = score
     self.filtered_tokens = set([Vocab.SS, Vocab.ES])
 
-  def to_string(self):
+  def to_tokens(self):
     map_func = lambda wi: self.vocab[wi] if self.vocab != None else str
     return six.moves.map(map_func, filter(lambda wi: wi not in self.filtered_tokens, self.actions))
 
@@ -34,9 +34,34 @@ class PlainTextOutputProcessor(OutputProcessor):
   '''
   def process_outputs(self, outputs):
     for output in outputs:
-      output.plaintext = self.words_to_string(output.to_string())
+      output.tokentext = self.make_tok_string(output.to_tokens())
+      output.plaintext = self.make_postproc_string(output.to_tokens())
 
-  def words_to_string(self, word_list):
+  def postproc_file(self, filename_in, filename_out):
+    """
+    Postprocess an entire file
+    """
+    with io.open(filename_in, encoding=encoding) as stream_in:
+      with io.open(filename_out, 'wt', encoding=encoding) as stream_out:
+        for line in stream_in:
+          stream_out.write(self.make_postproc_string(line.strip().split()) + u"\n")
+
+  def does_postproc(self):
+    """
+    Defines whether the output of make_tok_string and make_postrpoc_string are different
+    """
+    return False
+
+  def make_tok_string(self, word_list):
+    """
+    Make a string of tokens in plain text without any postprocessing
+    """
+    return u" ".join(word_list)
+
+  def make_postproc_string(self, word_list):
+    """
+    Convert the output to plain text after postprocessing
+    """
     return u" ".join(word_list)
 
 class JoinedCharTextOutputProcessor(PlainTextOutputProcessor):
@@ -48,8 +73,11 @@ class JoinedCharTextOutputProcessor(PlainTextOutputProcessor):
   def __init__(self, space_token=u"▁"):
     self.space_token = space_token
 
-  def words_to_string(self, word_list):
+  def make_postproc_string(self, word_list):
     return u"".join(map(lambda s: u" " if s==self.space_token else s, word_list))
+
+  def does_postproc(self):
+    return True
 
 class JoinedBPETextOutputProcessor(PlainTextOutputProcessor):
   '''
@@ -59,8 +87,11 @@ class JoinedBPETextOutputProcessor(PlainTextOutputProcessor):
   def __init__(self, merge_indicator=u"@@"):
     self.merge_indicator_with_space = merge_indicator + u" "
 
-  def words_to_string(self, word_list):
+  def make_postproc_string(self, word_list):
     return u" ".join(word_list).replace(self.merge_indicator_with_space, u"")
+
+  def does_postproc(self):
+    return True
 
 class JoinedPieceTextOutputProcessor(PlainTextOutputProcessor):
   '''
@@ -71,5 +102,8 @@ class JoinedPieceTextOutputProcessor(PlainTextOutputProcessor):
   def __init__(self, space_token=u"\u2581"):
     self.space_token = space_token
 
-  def words_to_string(self, word_list):
+  def make_postproc_string(self, word_list):
     return u"".join(word_list).replace(self.space_token, u" ").strip()
+
+  def does_postproc(self):
+    return True

@@ -44,9 +44,6 @@ class Translator(GeneratorModel):
     """
     self.trg_vocab = trg_vocab
 
-  def set_post_processor(self, post_processor):
-    self.post_processor = post_processor
-
 class DefaultTranslator(Translator, Serializable, Reportable):
   '''
   A default translator based on attentional sequence-to-sequence models.
@@ -121,7 +118,7 @@ class DefaultTranslator(Translator, Serializable, Reportable):
       self.attender.init_sent(encodings)
       ss = mark_as_batch([Vocab.SS] * len(src)) if is_batched(src) else Vocab.SS
       dec_state = self.decoder.initial_state(self.encoder.get_final_states(), self.trg_embedder.embed(ss))
-      output_actions, score = self.search_strategy.generate_output(self.decoder, self.attender, self.trg_embedder, dec_state, src_length=len(sents), forced_trg_ids=forced_trg_ids)
+      output_actions, score = self.search_strategy.generate(self.decoder, self.attender, self.trg_embedder, dec_state, src_length=len(sents), forced_trg_ids=forced_trg_ids)
       # In case of reporting
       if self.report_path is not None:
         src_words = [self.reporting_src_vocab[w] for w in sents]

@@ -79,6 +79,12 @@ standard-preproc:
         spec:
         - type: freq
           min_freq: 2
+  inference: !SimpleInference &global_inference
+    beam: 5
+    post_process: join-piece
+    src_file: examples/preproc/test.norm.ja
+  evaluate:
+    ref_file: examples/preproc/test.norm.en
   train: !SimpleTrainingRegimen
     run_for_epochs: 20
     dev_metrics: bleu
@@ -109,8 +115,4 @@ standard-preproc:
         layers: 1
         mlp_hidden_dim: 512
         bridge: !NoBridge {}
-  inference: !SimpleInference
-    post_process: join-piece
-    src_file: examples/preproc/test.norm.ja
-  evaluate:
-    ref_file: examples/preproc/test.norm.en
+    inference: *global_inference

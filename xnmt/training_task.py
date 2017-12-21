@@ -3,6 +3,7 @@ from __future__ import division, generators
 from subprocess import Popen
 import random
 import io
+import shutil
 
 import numpy as np
 import dynet as dy
@@ -47,13 +48,13 @@ class TrainingTask(object):
   def checkpoint_needed(self):
     raise NotImplementedError()
 
-  def checkpoint(self, control_learning_schedule=False, out_ext=".dev_hyp", ref_ext=".dev_ref", 
+  def checkpoint(self, control_learning_schedule=False, hyp_ext=".dev_hyp", ref_ext=".dev_ref", 
                  encoding='utf-8'):
     """
     Performs a dev checkpoint
     :param control_learning_schedule: If False, only evaluate dev data.
                                       If True, also perform model saving, LR decay etc. if needed.
-    :param out_ext:
+    :param hyp_ext:
     :param ref_ext:
     :param encoding:
     :returns: True if the model needs saving, False otherwise
@@ -104,6 +105,7 @@ class SimpleTrainingTask(TrainingTask, Serializable):
     self.lr_decay_times = lr_decay_times
     self.restart_trainer = restart_trainer
     self.run_for_epochs = run_for_epochs
+    self.inference = inference
     
     self.early_stopping_reached = False
     # training state
@@ -113,8 +115,8 @@ class SimpleTrainingTask(TrainingTask, Serializable):
     if schedule_metric.lower() not in self.evaluators:
               self.evaluators.append(schedule_metric.lower())
     if "loss" not in self.evaluators: self.evaluators.append("loss")
-    if dev_metrics:
-      self.inference = inference or SimpleInference()
+    if dev_metrics and not inference:
+      raise RuntimeError("Dev metrics specified ({}) but no inference algorithm available".format(dev_metrics))
 
     self.reload_command = reload_command
     if reload_command is not None:
@@ -275,12 +277,12 @@ class SimpleTrainingTask(TrainingTask, Serializable):
   def checkpoint_needed(self):
     return self.logger.should_report_dev()
 
-  def checkpoint(self, control_learning_schedule=True, out_ext=".dev_hyp", ref_ext=".dev_ref", encoding='utf-8'):
+  def checkpoint(self, control_learning_schedule=True, hyp_ext=".dev_hyp", hyp_preproc_ext=".dev_preproc_hyp", ref_ext=".dev_ref", ref_preproc_ext=".dev_preproc_ref", encoding='utf-8'):
     """
     Performs a dev checkpoint
     :param control_learning_schedule: If False, only evaluate dev data.
                                       If True, also perform model saving, LR decay etc. if needed.
-    :param out_ext:
+    :param hyp_ext:
     :param ref_ext:
     :param encoding:
     :returns: True if the model needs saving, False otherwise
@@ -290,30 +292,34 @@ class SimpleTrainingTask(TrainingTask, Serializable):
     trg_words_cnt, loss_score = self.compute_dev_loss() # forced decoding loss
 
     eval_scores = {"loss" : loss_score}
+    print("**** self.evaluators: {}".format(self.evaluators))
     if len(list(filter(lambda e: e!="loss", self.evaluators))) > 0:
-      trg_file = None
+      hyp_file = None
       if self.model_file:
         evaluate_args = {}
-        out_file = self.model_file + out_ext
-        out_file_ref = self.model_file + ref_ext
-        trg_file = out_file
-        evaluate_args["hyp_file"] = out_file
-        evaluate_args["ref_file"] = out_file_ref
-      # Decoding + post_processing
+        hyp_file = self.model_file + hyp_ext
+        ref_file = self.model_file + ref_ext
+        hyp_preproc_file = self.model_file + hyp_preproc_ext
+        ref_preproc_file = self.model_file + ref_preproc_ext
+        evaluate_args["hyp_file"] = hyp_file
+        evaluate_args["ref_file"] = ref_file
+      # Decoding
       self.inference(corpus_parser = self.corpus_parser, generator = self.model,
                      batcher = self.batcher,
                      src_file = self.corpus_parser.training_corpus.dev_src,
-                     trg_file = trg_file,
+                     trg_file = hyp_file,
+                     trg_preproc_file = hyp_preproc_file,
                      candidate_id_file = self.corpus_parser.training_corpus.dev_id_file)
-      output_processor = self.inference.get_output_processor() # TODO: hack, refactor
-      # Copy Trg to Ref
-      processed = []
-      with io.open(self.corpus_parser.training_corpus.dev_trg, encoding=encoding) as fin:
-        for line in fin:
-          processed.append(output_processor.words_to_string(line.strip().split()) + u"\n")
-      with io.open(out_file_ref, 'wt', encoding=encoding) as fout:
-        for line in processed:
-          fout.write(line)
+      post_process = self.inference.post_process
+      # Copy reference and postproc if necessary
+      # TODO: do we need to do this on every checkpoint?
+      if post_process.does_postproc():
+        print("**** copying {} to {}".format(self.corpus_parser.training_corpus.dev_trg, ref_preproc_file))
+        shutil.copy(self.corpus_parser.training_corpus.dev_trg, ref_preproc_file)
+        post_process.postproc_file(ref_preproc_file, ref_file)
+      else:
+        print("**** copying {} to {}".format(self.corpus_parser.training_corpus.dev_trg, ref_preproc_file))
+        shutil.copy(self.corpus_parser.training_corpus.dev_trg, ref_file)
       # Evaluation
       for evaluator in self.evaluators:
         if evaluator=="loss": continue
